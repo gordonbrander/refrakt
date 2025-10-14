@@ -1,10 +1,6 @@
 import { AnySignal, signal } from "./signals.ts";
 
 export type Get<T> = () => T;
-export type Saga<Model, Msg> = (
-  state: Get<Model>,
-  msg: Msg,
-) => AsyncGenerator<Msg>;
 
 /**
  * A tagged message. This is a convenience type for simple messages with a
@@ -39,40 +35,35 @@ export type Store<Model, Msg> = AnySignal<Model> & {
   send: Send<Msg>;
 };
 
+export type Middleware<Model, Msg> = (
+  state: Get<Model>,
+) => (
+  send: Send<Msg>,
+) => Send<Msg>;
+
 export const store = <Model, Msg>({
   state,
   update,
-  saga,
-  debug = false,
+  middleware = [],
 }: {
   state: Model;
   update: Reducer<Model, Msg>;
-  saga: Saga<Model, Msg>;
-  debug?: boolean;
+  middleware?: Middleware<Model, Msg>[];
 }): Store<Model, Msg> => {
   const $state = signal(state);
 
-  const forkFx = async (fx: AsyncGenerator<Msg>) => {
-    try {
-      for await (const msg of fx) {
-        send(msg);
-      }
-    } catch (error) {
-      console.warn("Error in saga", error);
-    }
-  };
-
   const get = () => $state.get();
 
-  const send = (msg: Msg) => {
-    if (debug) console.log("<", msg);
+  const baseSend = (msg: Msg) => {
     const next = update($state.get(), msg);
-    if (debug) console.log(">", next);
     $state.set(next);
-    // Generate next saga and fork it
-    const fx = saga(get, msg);
-    forkFx(fx);
   };
+
+  // Apply middleware to the send function
+  const send = middleware.reduce(
+    (currentSend, mw) => mw(get)(currentSend),
+    baseSend,
+  );
 
   return {
     get,
