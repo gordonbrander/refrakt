@@ -128,6 +128,7 @@ Deno.test("sequenceAsync - handles all empty iterables", async () => {
 
 Deno.test("mapAsync - maps values with async function", async () => {
   const source = fromArray([1, 2, 3]);
+  // deno-lint-ignore require-await
   const mapper = async (x: number) => x * 2;
 
   const result = await collectAll(mapAsync(source, mapper));
@@ -136,6 +137,7 @@ Deno.test("mapAsync - maps values with async function", async () => {
 
 Deno.test("mapAsync - maps values with Promise-returning function", async () => {
   const source = fromArray(["hello", "world"]);
+  // deno-lint-ignore require-await
   const mapper = async (s: string) => s.toUpperCase();
 
   const result = await collectAll(mapAsync(source, mapper));
@@ -144,6 +146,7 @@ Deno.test("mapAsync - maps values with Promise-returning function", async () => 
 
 Deno.test("mapAsync - handles empty iterable", async () => {
   const source = fromArray([]);
+  // deno-lint-ignore require-await
   const mapper = async (x: number) => x * 2;
 
   const result = await collectAll(mapAsync(source, mapper));
@@ -163,6 +166,7 @@ Deno.test("mapAsync - handles async mapper with delays", async () => {
 
 Deno.test("mapAsync - propagates mapper errors", async () => {
   const source = fromArray([1, 2, 3]);
+  // deno-lint-ignore require-await
   const mapper = async (x: number) => {
     if (x === 2) throw new Error("Test error");
     return x * 2;
@@ -184,6 +188,7 @@ Deno.test("Complex scenario - combining all utilities", async () => {
   const merged = mergeAsync(numbers, moreNumbers);
 
   // Map the merged values
+  // deno-lint-ignore require-await
   const mapped = mapAsync(merged, async (x) => x * 10);
 
   // Sequence with another iterable
@@ -205,6 +210,7 @@ Deno.test("Performance - handles large datasets efficiently", async () => {
   const source = fromArray(largeArray);
 
   const startTime = Date.now();
+  // deno-lint-ignore require-await
   const result = await collectAll(mapAsync(source, async (x) => x * 2));
   const endTime = Date.now();
 

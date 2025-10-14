@@ -1,3 +1,6 @@
+/** A promise or value */
+export type Awaitable<T> = Promise<T> | T;
+
 export const toAsyncIterator = <T>(
   iterable: AsyncIterable<T>,
 ): AsyncIterator<T, unknown, unknown> => {
@@ -55,6 +58,11 @@ export async function* mergeAsync<T>(...iterables: AsyncIterable<T>[]) {
   }
 }
 
+/**
+ * Sequence multiple async iterables.
+ * Values are yielded in sequence, with all values from the first iterable
+ * yielded before any values from the second iterable, and so on.
+ */
 export async function* sequenceAsync<T>(
   ...iterables: AsyncIterable<T>[]
 ): AsyncGenerator<T, void, void> {
@@ -65,11 +73,12 @@ export async function* sequenceAsync<T>(
   }
 }
 
+/** Transform each value in an async iterable */
 export async function* mapAsync<T, U>(
   iterable: AsyncIterable<T>,
-  mapper: (value: T) => Promise<U>,
+  transform: (value: T) => Awaitable<U>,
 ): AsyncGenerator<U, void, void> {
   for await (const value of iterable) {
-    yield await mapper(value);
+    yield await transform(value);
   }
 }
