@@ -4,7 +4,7 @@ import {
   mergeAsync,
   sequenceAsync,
   toAsyncIterator,
-} from "./async-iterator.ts";
+} from "./iter.ts";
 
 // Helper function to create async iterables from arrays
 async function* fromArray<T>(
