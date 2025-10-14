@@ -7,8 +7,31 @@ export type Saga<Model, Msg> = (
 ) => AsyncGenerator<Msg>;
 
 /**
- * Saga middleware that handles async effects/sagas execution.
- * Extracts the saga functionality from the store into reusable middleware.
+ * Saga middleware provides managed effects modeled as async generators.
+ * Each incoming msg spawns a new forked saga at the top level that can yield
+ * zero or more messages.
+ *
+ * Sagas have access to a getter function for the current state of the store
+ * allowing them to make decisions about when to continue and when to exit.
+ * Cancellable tasks can be modeled by recording relevant state on the model and
+ * checking the current state within the generator.
+ *
+ * @usage
+ * ```ts
+ * import { saga } from "signal-store/middleware/saga.ts";
+ *
+ * async function* fx(state: () => Model, msg: Msg) {
+ *    if (msg.type === "some-action") {
+ *      yield { type: "some-other-action", payload: "some-payload" };
+ *    }
+ * }
+ *
+ * const state = store(
+ *   state,
+ *   update,
+ *   middleware: [saga(fx)];
+ * );
+ * ```
  */
 export const saga = <Model, Msg>(
   saga: Saga<Model, Msg>,
