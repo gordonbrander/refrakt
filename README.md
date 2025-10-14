@@ -140,7 +140,7 @@ type Saga<Model, Msg> = (
 ) => AsyncGenerator<Msg>; // Yields messages back to store
 ```
 
-### Middleware
+## Middleware
 
 Middleware allows you to intercept and transform messages as they flow through the store. Middleware functions have access to the current state and can modify, log, or trigger side effects.
 
@@ -158,7 +158,7 @@ const counterStore = store({
 });
 ```
 
-#### Middleware Signature
+### Middleware Signature
 
 ```typescript
 type Middleware<Model, Msg> = (
