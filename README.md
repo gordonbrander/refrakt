@@ -158,24 +158,7 @@ const counterStore = store({
 });
 ```
 
-### Middleware Signature
-
-```typescript
-type Middleware<Model, Msg> = (
-  state: Get<Model>
-) => (
-  send: Send<Msg>
-) => Send<Msg>;
-```
-
-Middleware is curried to provide access to:
-1. `state` - Function to get current state
-2. `send` - The next middleware or base send function
-3. Returns a new send function that can intercept messages
-
-#### Built-in Middleware
-
-##### Logger Middleware
+### Logger Middleware
 
 Logs all messages and state changes to the console:
 
@@ -194,41 +177,31 @@ MyStore: < { type: 'increment' }
 MyStore: > { count: 1 }
 ```
 
-## Utility Functions
+### Saga Middleware
 
-- `msg(type, value)` - Create tagged messages: `msg('set', 42)` → `{ type: 'set', value: 42 }`
-- `forward(send, transform)` - Transform messages before sending
-- `updateUnknown(state, msg)` - Default handler for unknown messages (logs warning)
-
-
-## Advanced Usage
-
-### Composing Stores
-
-You can compose multiple stores and forward messages between them:
+Sagas are asynchronous middleware that can yield messages back to the store.
 
 ```typescript
-import { forward } from './store.ts';
+import { saga } from './middleware/saga.ts';
 
-const childStore = store({ /* ... */ });
-
-const parentStore = store({
-  state: { child: childStore.get(), /* ... */ },
-  update: (state, msg) => {
-    if (msg.type === 'child_msg') {
-      // Forward to child store
-      const childSend = forward(childStore.send, (msg) => msg.payload);
-      childSend(msg.payload);
-      return { ...state, child: childStore.get() };
-    }
-    // Handle parent messages...
-  }
-});
+const mySaga = async (state, msg) => {
+  yield { type: 'increment' };
+};
 ```
 
 ### Custom Middleware
 
-Create your own middleware for specialized behavior:
+Create your own middleware for specialized behavior. Middleware Signature:
+
+```typescript
+type Middleware<Model, Msg> = (
+  state: Get<Model>
+) => (
+  send: Send<Msg>
+) => Send<Msg>;
+```
+
+Example:
 
 ```typescript
 const timingMiddleware = <Model, Msg>(): Middleware<Model, Msg> =>
@@ -240,96 +213,48 @@ const timingMiddleware = <Model, Msg>(): Middleware<Model, Msg> =>
   };
 ```
 
-### Complex Sagas
+## Utility Functions
 
-Sagas can handle complex async workflows:
-
-```typescript
-const complexSaga: Saga<AppState, AppMsg> = async function* (get, msg) {
-  if (msg.type === 'start_workflow') {
-    // Step 1: Initial setup
-    yield { type: 'workflow_started' };
-
-    // Step 2: Parallel operations
-    const [result1, result2] = await Promise.all([
-      fetchData('endpoint1'),
-      fetchData('endpoint2')
-    ]);
-
-    yield { type: 'data_loaded', data: { result1, result2 } };
-
-    // Step 3: Conditional logic based on state
-    const currentState = get();
-    if (currentState.shouldContinue) {
-      for (let i = 0; i < 3; i++) {
-        await delay(1000);
-        yield { type: 'progress_update', step: i + 1 };
-      }
-    }
-
-    yield { type: 'workflow_complete' };
-  }
-};
-```
-
-## Async Utilities
-
-The library includes utilities for working with async iterables in the `iter.ts` module:
-
-- `mergeAsync(...iterables)` - Merge multiple async iterables
-- `sequenceAsync(...iterables)` - Sequence async iterables
-- `mapAsync(iterable, transform)` - Transform async iterable values
-
-## Best Practices
-
-1. **Keep reducers pure** - No side effects, just state transformations
-2. **Use sagas for async operations** - Don't put async logic in reducers
-3. **Type your messages** - Use discriminated unions for type safety
-4. **Compose middleware** - Build complex behavior from simple middleware
-5. **Batch related updates** - Let the signal system handle batching automatically
+- `msg(type, value)` - Create tagged messages: `msg('set', 42)` → `{ type: 'set', value: 42 }`
+- `forward(send, transform)` - Decorates send function so that it transform messages before sending
+- `updateUnknown(state, msg)` - Default handler for unknown messages (logs warning)
 
 ## Examples
 
-### Simple Counter
+### Simple counter with Lit
 
 ```typescript
+import { store, computed, updateUnknown } from "signal-store";
+import { LitElement } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import { html } from '@lit-labs/signals';
+
 const counter = store({
   state: { count: 0 },
   update: (state, msg: { type: 'inc' } | { type: 'dec' }) => {
     switch (msg.type) {
       case 'inc': return { count: state.count + 1 };
       case 'dec': return { count: state.count - 1 };
-      default: return state;
+      default: return updateUnknown(state, msg);
     }
   }
 });
-```
 
-### Todo App with Async Effects
 
-```typescript
-type TodoMsg =
-  | { type: 'add_todo', text: string }
-  | { type: 'toggle_todo', id: string }
-  | { type: 'save_todos' }
-  | { type: 'todos_saved' };
+@customElement('counter-app')
+class CounterApp extends LitElement {
+  render() {
+    const count = computed(() => counter.get().count);
 
-const todoSaga: Saga<TodoState, TodoMsg> = async function* (get, msg) {
-  if (msg.type === 'save_todos') {
-    const todos = get().todos;
-    await fetch('/api/todos', {
-      method: 'POST',
-      body: JSON.stringify(todos)
-    });
-    yield { type: 'todos_saved' };
+    return html`
+      <div>
+        <h1>Count: ${count}</h1>
+        <button @click=${() => counter.send({ type: 'inc' })}>+</button>
+        <button @click=${() => counter.send({ type: 'dec' })}>-</button>
+      </div>
+    `;
   }
-};
-
-const todoStore = store({
-  state: { todos: [], saving: false },
-  update: todoReducer,
-  middleware: [saga(todoSaga), logger()]
-});
+}
 ```
 
 ## License
