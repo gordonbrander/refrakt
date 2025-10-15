@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { type Saga, saga } from "./saga.ts";
+import { type Fx, fx } from "./fx.ts";
 import { type Reducer, store } from "../store.ts";
 
 // Test types
@@ -22,7 +22,7 @@ type CounterState = {
 // Helper function to create a promise that resolves after a delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-Deno.test("saga - handles simple async effects", async () => {
+Deno.test("fx - handles simple async effects", async () => {
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
     switch (msg.type) {
       case "increment":
@@ -38,7 +38,7 @@ Deno.test("saga - handles simple async effects", async () => {
     }
   };
 
-  const testSaga: Saga<CounterState, CounterMsg> = async function* (get, msg) {
+  const testFx: Fx<CounterState, CounterMsg> = async function* (get, msg) {
     if (msg.type === "async_increment") {
       await delay(10);
       yield { type: "increment" };
@@ -49,7 +49,7 @@ Deno.test("saga - handles simple async effects", async () => {
   const counterStore = store({
     state: { count: 0, loading: false },
     update: counterReducer,
-    middleware: [saga(testSaga)],
+    middleware: [fx(testFx)],
   });
 
   counterStore.send({ type: "async_increment" });
@@ -61,7 +61,7 @@ Deno.test("saga - handles simple async effects", async () => {
   assertEquals(counterStore.get().count, 6); // 0 + 1 + 5
 });
 
-Deno.test("saga - handles multiple yielded messages", async () => {
+Deno.test("fx - handles multiple yielded messages", async () => {
   const messages: CounterMsg[] = [];
 
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
@@ -78,7 +78,7 @@ Deno.test("saga - handles multiple yielded messages", async () => {
     }
   };
 
-  const testSaga: Saga<CounterState, CounterMsg> = async function* (_get, msg) {
+  const testFx: Fx<CounterState, CounterMsg> = async function* (_get, msg) {
     if (msg.type === "multi_step") {
       yield { type: "increment" };
       await delay(5);
@@ -92,7 +92,7 @@ Deno.test("saga - handles multiple yielded messages", async () => {
   const counterStore = store({
     state: { count: 0, loading: false },
     update: counterReducer,
-    middleware: [saga(testSaga)],
+    middleware: [fx(testFx)],
   });
 
   counterStore.send({ type: "multi_step" });
@@ -109,7 +109,7 @@ Deno.test("saga - handles multiple yielded messages", async () => {
   assertEquals(messages[4].type, "increment");
 });
 
-Deno.test("saga - ignores messages that don't trigger effects", async () => {
+Deno.test("fx - ignores messages that don't trigger effects", async () => {
   const messages: CounterMsg[] = [];
 
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
@@ -124,18 +124,18 @@ Deno.test("saga - ignores messages that don't trigger effects", async () => {
     }
   };
 
-  const testSaga: Saga<CounterState, CounterMsg> = async function* (_get, msg) {
+  const testFx: Fx<CounterState, CounterMsg> = async function* (_get, msg) {
     if (msg.type === "increment") {
       await delay(5);
       yield { type: "increment" };
     }
-    // no_effect message doesn't trigger any saga
+    // no_effect message doesn't trigger any fx
   };
 
   const counterStore = store({
     state: { count: 0, loading: false },
     update: counterReducer,
-    middleware: [saga(testSaga)],
+    middleware: [fx(testFx)],
   });
 
   counterStore.send({ type: "no_effect" });
@@ -149,7 +149,7 @@ Deno.test("saga - ignores messages that don't trigger effects", async () => {
   assertEquals(counterStore.get().count, 0);
 });
 
-Deno.test("saga - can access current state", async () => {
+Deno.test("fx - can access current state", async () => {
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
     switch (msg.type) {
       case "increment":
@@ -163,7 +163,7 @@ Deno.test("saga - can access current state", async () => {
     }
   };
 
-  const testSaga: Saga<CounterState, CounterMsg> = async function* (get, msg) {
+  const testFx: Fx<CounterState, CounterMsg> = async function* (get, msg) {
     if (msg.type === "async_double") {
       const currentCount = get().count;
       await delay(5);
@@ -174,7 +174,7 @@ Deno.test("saga - can access current state", async () => {
   const counterStore = store({
     state: { count: 5, loading: false },
     update: counterReducer,
-    middleware: [saga(testSaga)],
+    middleware: [fx(testFx)],
   });
 
   counterStore.send({ type: "async_double" });
@@ -184,7 +184,7 @@ Deno.test("saga - can access current state", async () => {
   assertEquals(counterStore.get().count, 10); // 5 * 2
 });
 
-Deno.test("saga - handles errors gracefully", async () => {
+Deno.test("fx - handles errors gracefully", async () => {
   const originalWarn = console.warn;
   let warningMessage = "";
 
@@ -206,7 +206,7 @@ Deno.test("saga - handles errors gracefully", async () => {
     };
 
     // deno-lint-ignore require-yield
-    const testSaga: Saga<CounterState, CounterMsg> = async function* (
+    const testFx: Fx<CounterState, CounterMsg> = async function* (
       _get,
       msg,
     ) {
@@ -219,7 +219,7 @@ Deno.test("saga - handles errors gracefully", async () => {
     const counterStore = store({
       state: { count: 0, loading: false },
       update: counterReducer,
-      middleware: [saga(testSaga)],
+      middleware: [fx(testFx)],
     });
 
     counterStore.send({ type: "async_error" });
@@ -230,14 +230,14 @@ Deno.test("saga - handles errors gracefully", async () => {
     // Store state should remain unchanged after error
     assertEquals(counterStore.get().count, 0);
     assertEquals(counterStore.get().loading, true);
-    assertEquals(warningMessage, "Error in saga");
+    assertEquals(warningMessage, "Error in fx");
   } finally {
     // Restore console.warn
     console.warn = originalWarn;
   }
 });
 
-Deno.test("saga - works with empty generator", async () => {
+Deno.test("fx - works with empty generator", async () => {
   const messages: CounterMsg[] = [];
 
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
@@ -246,7 +246,7 @@ Deno.test("saga - works with empty generator", async () => {
   };
 
   // deno-lint-ignore require-yield
-  const testSaga: Saga<CounterState, CounterMsg> = async function* (
+  const testFx: Fx<CounterState, CounterMsg> = async function* (
     _get,
     _msg,
   ) {
@@ -257,7 +257,7 @@ Deno.test("saga - works with empty generator", async () => {
   const counterStore = store({
     state: { count: 0, loading: false },
     update: counterReducer,
-    middleware: [saga(testSaga)],
+    middleware: [fx(testFx)],
   });
 
   counterStore.send({ type: "increment" });
@@ -268,7 +268,7 @@ Deno.test("saga - works with empty generator", async () => {
   assertEquals(messages[0].type, "increment");
 });
 
-Deno.test("saga - preserves message order", async () => {
+Deno.test("fx - preserves message order", async () => {
   const processedMessages: string[] = [];
 
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
@@ -283,9 +283,9 @@ Deno.test("saga - preserves message order", async () => {
     }
   };
 
-  const testSaga: Saga<CounterState, CounterMsg> = async function* (_get, msg) {
+  const testFx: Fx<CounterState, CounterMsg> = async function* (_get, msg) {
     if (msg.type === "async_increment") {
-      processedMessages.push(`saga:${msg.type}`);
+      processedMessages.push(`fx:${msg.type}`);
       await delay(5);
       yield { type: "increment" };
     }
@@ -294,7 +294,7 @@ Deno.test("saga - preserves message order", async () => {
   const counterStore = store({
     state: { count: 0, loading: false },
     update: counterReducer,
-    middleware: [saga(testSaga)],
+    middleware: [fx(testFx)],
   });
 
   counterStore.send({ type: "async_increment" });
@@ -303,12 +303,12 @@ Deno.test("saga - preserves message order", async () => {
 
   assertEquals(processedMessages, [
     "reducer:async_increment",
-    "saga:async_increment",
+    "fx:async_increment",
     "reducer:increment",
   ]);
 });
 
-Deno.test("saga - can chain multiple async operations", async () => {
+Deno.test("fx - can chain multiple async operations", async () => {
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
     switch (msg.type) {
       case "increment":
@@ -322,7 +322,7 @@ Deno.test("saga - can chain multiple async operations", async () => {
     }
   };
 
-  const testSaga: Saga<CounterState, CounterMsg> = async function* (get, msg) {
+  const testFx: Fx<CounterState, CounterMsg> = async function* (get, msg) {
     if (msg.type === "async_increment") {
       // First async operation
       await delay(5);
@@ -341,7 +341,7 @@ Deno.test("saga - can chain multiple async operations", async () => {
   const counterStore = store({
     state: { count: 0, loading: false },
     update: counterReducer,
-    middleware: [saga(testSaga)],
+    middleware: [fx(testFx)],
   });
 
   counterStore.send({ type: "async_increment" });
@@ -351,7 +351,7 @@ Deno.test("saga - can chain multiple async operations", async () => {
   assertEquals(counterStore.get().count, 12); // 0 + 1 + 1 + 10
 });
 
-Deno.test("saga - runs concurrently for multiple messages", async () => {
+Deno.test("fx - runs concurrently for multiple messages", async () => {
   const timestamps: number[] = [];
 
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
@@ -366,7 +366,7 @@ Deno.test("saga - runs concurrently for multiple messages", async () => {
     }
   };
 
-  const testSaga: Saga<CounterState, CounterMsg> = async function* (_get, msg) {
+  const testFx: Fx<CounterState, CounterMsg> = async function* (_get, msg) {
     if (msg.type === "async_increment") {
       await delay(10);
       yield { type: "increment" };
@@ -376,7 +376,7 @@ Deno.test("saga - runs concurrently for multiple messages", async () => {
   const counterStore = store({
     state: { count: 0, loading: false },
     update: counterReducer,
-    middleware: [saga(testSaga)],
+    middleware: [fx(testFx)],
   });
 
   // Send multiple async messages quickly

@@ -1,16 +1,55 @@
 # Signal Store
 
-A reactive state management library built on TC39 Signals, featuring middleware support and managed side effects based on Async Generators.
+A reactive state management library built on top of TC39 Signals, featuring middleware support and managed side effects based on async generators.
 
-This library provides an Elm or Redux-like store for Lit and other frameworks that support TC39 Signals.
+This library provides an Elm/Redux-style store for Lit and other frameworks that support TC39 Signals.
 
 ## Features
 
-- **Fine-grained reactivity**: Built on the TC39 Signals proposal.
-- **Middleware System**: Supports composable middleware
-- **Saga Effects**: managed side effects with async generators
-- **TypeScript support**: Full TypeScript support with strong typing
-- **Minimal dependencies**: Uses only the signal-polyfill for maximum compatibility
+- **Signals**: Built on top of TC39 signals for fine-grained reactivity.
+- **Effects**: managed side effects with async generators.
+- **Middleware System**: Fully customize store behavior.
+- **TypeScript support**: Full TypeScript support with strong typing.
+- **Minimal dependencies**: Uses only `signal-polyfill` library for maximum compatibility.
+
+### Example
+
+Here's a simple counter example with UI provided by Lit.
+
+```typescript
+import { store, computed } from "signal-store";
+import { LitElement } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import { html } from '@lit-labs/signals';
+
+type Msg = { type: 'inc' } | { type: 'dec' };
+
+const counter = store({
+  state: { count: 0 },
+  update: (state, msg: Msg) => {
+    switch (msg.type) {
+      case 'inc': return { count: state.count + 1 };
+      case 'dec': return { count: state.count - 1 };
+      default: return state;
+    }
+  }
+});
+
+@customElement('counter-app')
+class CounterApp extends LitElement {
+  render() {
+    const count = computed(() => counter.get().count);
+
+    return html`
+      <div>
+        <h1>Count: ${count}</h1>
+        <button @click=${() => counter.send({ type: 'inc' })}>+</button>
+        <button @click=${() => counter.send({ type: 'dec' })}>-</button>
+      </div>
+    `;
+  }
+}
+```
 
 ## Store
 
@@ -91,21 +130,21 @@ count.set(20); // Logs: "Count: 20 Doubled: 40"
 cleanup(); // Stop the effect
 ```
 
-## Managed effects with saga middleware
+## Managed effects
 
-Sagas provide a powerful way to handle async side effects using async generators.
+The `fx` middleware provides a powerful way to handle side effects using async generators.
 
-Each new message to the store spawns a new saga which can yield one or more messages. The saga receives a getter function that returns the current state, allowing it to adapt its behavior. Cancellable effects can be modeled by recording the relevant state on the model and allowing the effect to cancel itself.
+Each new message to the store spawns a new effect which can yield zero or more messages. The effect generator function also receives a getter function that returns the current state. Cancellable effects can be modeled by recording the relevant state on the model and allowing the effect to cancel itself.
 
 ```typescript
-import { saga, type Saga } from './middleware/saga.ts';
+import { fx, type Fx } from './middleware/fx.ts';
 
 type AppMsg =
   | { type: 'start-clock' }
   | { type: 'stop-clock' }
   | { type: 'tick' };
 
-const clockSaga: Saga<AppState, AppMsg> = async function* (state, msg) {
+const clockFx: Fx<AppState, AppMsg> = async function* (state, msg) {
   if (msg.type === "start-clock") {
     // Run effect until application model says to stop
     while (state().isClockRunning === true) {
@@ -118,14 +157,14 @@ const clockSaga: Saga<AppState, AppMsg> = async function* (state, msg) {
 const appStore = store({
   state: initialState,
   update: appReducer,
-  middleware: [saga(clockSaga)]
+  middleware: [fx(clockFx)]
 });
 
 // Trigger async effect
 appStore.send({ type: 'start-clock' });
 ```
 
-Because sagas are just async generators, they can be easily composed and mapped. The `iter` namespace provides a handful of useful utility functions for merging and mapping component effects:
+Because effects are just async generators, they can be easily composed and mapped. The `iter` namespace provides a handful of useful utility functions for merging and mapping component effects:
 
 - `mergeAsync(...iterables)` - Merge multiple async iterables, yielding values in interleaved order as they become available
 - `sequenceAsync(...iterables)` - Sequence async iterables, yielding all values from the first before moving to the next
@@ -134,9 +173,9 @@ Because sagas are just async generators, they can be easily composed and mapped.
 ### Saga API
 
 ```typescript
-type Saga<Model, Msg> = (
+type Fx<Model, Msg> = (
   state: Get<Model>,  // Function to get current state
-  msg: Msg           // The message that triggered this saga
+  msg: Msg           // The message triggering this effect
 ) => AsyncGenerator<Msg>; // Yields messages back to store
 ```
 
@@ -146,14 +185,14 @@ Middleware allows you to intercept and transform messages as they flow through t
 
 ```typescript
 import { store } from './store.ts';
-import { logger, saga } from './middleware/index.ts';
+import { logger, fx } from './middleware/index.ts';
 
 const counterStore = store({
   state: { count: 0 },
   update: (state, msg) => { /* reducer */ },
   middleware: [
     logger({ prefix: 'Counter: ' }),
-    saga(mySaga)
+    fx(mySaga)
   ]
 });
 ```
@@ -182,11 +221,11 @@ MyStore: > { count: 1 }
 Sagas are asynchronous middleware that can yield messages back to the store.
 
 ```typescript
-import { saga } from './middleware/saga.ts';
+import { fx } from './middleware/fx.ts';
 
-const mySaga = async (state, msg) => {
+const myFx = fx(async function* (state, msg) => {
   yield { type: 'increment' };
-};
+});
 ```
 
 ### Custom Middleware
@@ -218,44 +257,6 @@ const timingMiddleware = <Model, Msg>(): Middleware<Model, Msg> =>
 - `msg(type, value)` - Create tagged messages: `msg('set', 42)` → `{ type: 'set', value: 42 }`
 - `forward(send, transform)` - Decorates send function so that it transform messages before sending
 - `updateUnknown(state, msg)` - Default handler for unknown messages (logs warning)
-
-## Examples
-
-### Simple counter with Lit
-
-```typescript
-import { store, computed, updateUnknown } from "signal-store";
-import { LitElement } from 'lit';
-import { customElement } from 'lit/decorators.js';
-import { html } from '@lit-labs/signals';
-
-const counter = store({
-  state: { count: 0 },
-  update: (state, msg: { type: 'inc' } | { type: 'dec' }) => {
-    switch (msg.type) {
-      case 'inc': return { count: state.count + 1 };
-      case 'dec': return { count: state.count - 1 };
-      default: return updateUnknown(state, msg);
-    }
-  }
-});
-
-
-@customElement('counter-app')
-class CounterApp extends LitElement {
-  render() {
-    const count = computed(() => counter.get().count);
-
-    return html`
-      <div>
-        <h1>Count: ${count}</h1>
-        <button @click=${() => counter.send({ type: 'inc' })}>+</button>
-        <button @click=${() => counter.send({ type: 'dec' })}>-</button>
-      </div>
-    `;
-  }
-}
-```
 
 ## License
 
