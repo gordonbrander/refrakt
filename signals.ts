@@ -1,4 +1,5 @@
 import { Signal } from "signal-polyfill";
+export * from "signal-polyfill";
 
 export type AnySignal<T> = {
   get(): T;
