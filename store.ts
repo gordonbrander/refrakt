@@ -1,4 +1,4 @@
-import { AnySignal, signal } from "./signals.ts";
+import { AnySignal, computed, signal } from "./signals.ts";
 
 export type Get<T> = () => T;
 
@@ -67,6 +67,25 @@ export const store = <Model, Msg>({
 
   return {
     get,
+    send,
+  };
+};
+
+/**
+ * Create a scoped store.
+ * Scoped stores are useful for creating isolated state and behavior for child components.
+ * A scoped store exposes a computed subset of the parent state and maps the
+ * actions you send to it from the child domain to the parent domain.
+ */
+export const scope = <ModelA, MsgA, ModelB, MsgB>(
+  store: Store<ModelA, MsgA>,
+  get: (state: ModelA) => ModelB,
+  tag: (msg: MsgB) => MsgA,
+): Store<ModelB, MsgB> => {
+  const $state = computed(() => get(store.get()));
+  const send = forward(store.send, tag);
+  return {
+    get: () => $state.get(),
     send,
   };
 };
