@@ -45,7 +45,7 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "deno test --allow-all"
+    "test": "npm run build && node --test ./dist/**.test.js"
   },
   "keywords": [
     "signals",
@@ -60,6 +60,7 @@
     "signal-polyfill": "^0.2.2"
   },
   "devDependencies": {
+    "@types/node": "^24.8.0",
     "typescript": "^5.7.2"
   },
   "repository": {

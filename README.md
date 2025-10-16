@@ -53,7 +53,7 @@ class CounterApp extends LitElement {
 `store()` lets you create a signal that can only be updated via its reducer function. This is similar to React's `useReducer` hook, except it's based on signals.
 
 ```typescript
-import { store } from './store.ts';
+import { store } from './store.js';
 
 type CounterMsg =
   | { type: 'increment' }
@@ -91,7 +91,7 @@ Store can be used as a centralized store for application state, or you can creat
 The signals module re-exports the TC39 signals polyfill, as well as providing a handful of convenience functions.
 
 ```typescript
-import { signal, computed, effect } from 'signal-store/signal.ts';
+import { signal, computed, effect } from 'signal-store/signal.js';
 
 // Create a `State` signal
 const count = signal(10);
@@ -136,8 +136,8 @@ The effect generator function is called for each new message sent to the store, 
 
 ```typescript
 import { store } from 'signal-store';
-import { pipe } from 'signal-store/pipe.ts';
-import { fx, type Fx } from 'signal-store/middleware/fx.ts';
+import { pipe } from 'signal-store/pipe.js';
+import { fx, type Fx } from 'signal-store/middleware/fx.js';
 
 const fetchProfileFx: Fx<AppState, AppMsg> = async function* (state, msg) {
   if (msg.type === "fetch-profile") {
@@ -199,8 +199,8 @@ Logs all messages and state changes to the console:
 
 ```typescript
 import { store } from 'signal-store';
-import { pipe } from 'signal-store/pipe.ts';
-import { logger } from 'signal-store/middleware/logger.ts';
+import { pipe } from 'signal-store/pipe.js';
+import { logger } from 'signal-store/middleware/logger.js';
 
 const myStore = pipe(
   store(update, initialState),
@@ -220,8 +220,8 @@ Scope lets you create a scoped child store from a parent store. It returns a new
 
 ```typescript
 import { store } from 'signal-store';
-import { pipe } from 'signal-store/pipe.ts';
-import { scope } from 'signal-store/middleware/scope.ts';
+import { pipe } from 'signal-store/pipe.js';
+import { scope } from 'signal-store/middleware/scope.js';
 
 const childStore = pipe(
   parentStore,
@@ -252,9 +252,9 @@ Simple! However, if you're applying more than one middleware, these nested funct
 
 ```typescript
 import { store } from 'signal-store';
-import { pipe } from 'signal-store/pipe.ts';
-import { fx } from 'signal-store/middleware/fx.ts';
-import { logger } from 'signal-store/middleware/logger.ts';
+import { pipe } from 'signal-store/pipe.js';
+import { fx } from 'signal-store/middleware/fx.js';
+import { logger } from 'signal-store/middleware/logger.js';
 
 const counterStore = pipe(
   store(update, { count: 0 }),
@@ -270,7 +270,7 @@ This compositional approach makes it easy to add, remove, or write your own midd
 Creating your own middleware functions is easy. Just write a function that takes a store and returns a new store with enhanced behavior:
 
 ```typescript
-import type { Store } from './store.ts';
+import type { Store } from './store.js';
 
 const timingMiddleware = <Model, Msg>() =>
   (store: Store<Model, Msg>): Store<Model, Msg> => {

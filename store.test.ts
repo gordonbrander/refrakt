@@ -1,11 +1,6 @@
-import { assertEquals } from "@std/assert";
-import {
-  forward,
-  msg,
-  type Reducer,
-  store,
-  updateUnknown,
-} from "./store.ts";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { forward, msg, type Reducer, store, updateUnknown } from "./store.js";
 
 // Test types for messaging
 type CounterMsg =
@@ -30,7 +25,7 @@ interface TodoState {
   nextId: number;
 }
 
-Deno.test("store - creates store with initial state", () => {
+test("store - creates store with initial state", () => {
   const counterReducer: Reducer<number, CounterMsg> = (state, message) => {
     switch (message.type) {
       case "increment":
@@ -48,10 +43,10 @@ Deno.test("store - creates store with initial state", () => {
 
   const counterStore = store(counterReducer, 0);
 
-  assertEquals(counterStore.get(), 0);
+  assert.strictEqual(counterStore.get(), 0);
 });
 
-Deno.test("store - handles messages through send", () => {
+test("store - handles messages through send", () => {
   const counterReducer: Reducer<number, CounterMsg> = (state, message) => {
     switch (message.type) {
       case "increment":
@@ -70,22 +65,22 @@ Deno.test("store - handles messages through send", () => {
   const counterStore = store(counterReducer, 0);
 
   counterStore.send({ type: "increment" });
-  assertEquals(counterStore.get(), 1);
+  assert.strictEqual(counterStore.get(), 1);
 
   counterStore.send({ type: "increment" });
-  assertEquals(counterStore.get(), 2);
+  assert.strictEqual(counterStore.get(), 2);
 
   counterStore.send({ type: "decrement" });
-  assertEquals(counterStore.get(), 1);
+  assert.strictEqual(counterStore.get(), 1);
 
   counterStore.send({ type: "set", value: 10 });
-  assertEquals(counterStore.get(), 10);
+  assert.strictEqual(counterStore.get(), 10);
 
   counterStore.send({ type: "add", value: 5 });
-  assertEquals(counterStore.get(), 15);
+  assert.strictEqual(counterStore.get(), 15);
 });
 
-Deno.test("store - works with complex state", () => {
+test("store - works with complex state", () => {
   const todoReducer: Reducer<TodoState, TodoMsg> = (state, message) => {
     switch (message.type) {
       case "add":
@@ -119,48 +114,48 @@ Deno.test("store - works with complex state", () => {
 
   const todoStore = store(todoReducer, { todos: [], nextId: 1 });
 
-  assertEquals(todoStore.get().todos.length, 0);
+  assert.strictEqual(todoStore.get().todos.length, 0);
 
   todoStore.send({ type: "add", text: "Buy milk" });
-  assertEquals(todoStore.get().todos.length, 1);
-  assertEquals(todoStore.get().todos[0].text, "Buy milk");
-  assertEquals(todoStore.get().todos[0].completed, false);
-  assertEquals(todoStore.get().todos[0].id, 1);
+  assert.strictEqual(todoStore.get().todos.length, 1);
+  assert.strictEqual(todoStore.get().todos[0].text, "Buy milk");
+  assert.strictEqual(todoStore.get().todos[0].completed, false);
+  assert.strictEqual(todoStore.get().todos[0].id, 1);
 
   todoStore.send({ type: "add", text: "Walk dog" });
-  assertEquals(todoStore.get().todos.length, 2);
-  assertEquals(todoStore.get().nextId, 3);
+  assert.strictEqual(todoStore.get().todos.length, 2);
+  assert.strictEqual(todoStore.get().nextId, 3);
 
   todoStore.send({ type: "toggle", id: 1 });
-  assertEquals(todoStore.get().todos[0].completed, true);
+  assert.strictEqual(todoStore.get().todos[0].completed, true);
 
   todoStore.send({ type: "remove", id: 1 });
-  assertEquals(todoStore.get().todos.length, 1);
-  assertEquals(todoStore.get().todos[0].text, "Walk dog");
+  assert.strictEqual(todoStore.get().todos.length, 1);
+  assert.strictEqual(todoStore.get().todos[0].text, "Walk dog");
 });
 
-Deno.test("msg - creates tagged message", () => {
+test("msg - creates tagged message", () => {
   const message = msg("test", 42);
 
-  assertEquals(message.type, "test");
-  assertEquals(message.value, 42);
+  assert.strictEqual(message.type, "test");
+  assert.strictEqual(message.value, 42);
 });
 
-Deno.test("msg - works with different value types", () => {
+test("msg - works with different value types", () => {
   const stringMsg = msg("string", "hello");
-  assertEquals(stringMsg.type, "string");
-  assertEquals(stringMsg.value, "hello");
+  assert.strictEqual(stringMsg.type, "string");
+  assert.strictEqual(stringMsg.value, "hello");
 
   const objectMsg = msg("object", { key: "value" });
-  assertEquals(objectMsg.type, "object");
-  assertEquals(objectMsg.value, { key: "value" });
+  assert.strictEqual(objectMsg.type, "object");
+  assert.deepStrictEqual(objectMsg.value, { key: "value" });
 
   const arrayMsg = msg("array", [1, 2, 3]);
-  assertEquals(arrayMsg.type, "array");
-  assertEquals(arrayMsg.value, [1, 2, 3]);
+  assert.strictEqual(arrayMsg.type, "array");
+  assert.deepStrictEqual(arrayMsg.value, [1, 2, 3]);
 });
 
-Deno.test("forward - transforms messages", () => {
+test("forward - transforms messages", () => {
   const receivedMessages: string[] = [];
 
   const parentSend = (msg: string) => {
@@ -176,10 +171,10 @@ Deno.test("forward - transforms messages", () => {
   childSend(2);
   childSend(3);
 
-  assertEquals(receivedMessages, ["child:1", "child:2", "child:3"]);
+  assert.deepStrictEqual(receivedMessages, ["child:1", "child:2", "child:3"]);
 });
 
-Deno.test("forward - works with complex transformations", () => {
+test("forward - works with complex transformations", () => {
   type ParentMsg = { type: "parent"; data: string };
   type ChildMsg = { type: "child"; value: number };
 
@@ -196,12 +191,12 @@ Deno.test("forward - works with complex transformations", () => {
 
   childSend({ type: "child", value: 42 });
 
-  assertEquals(receivedMessages.length, 1);
-  assertEquals(receivedMessages[0].type, "parent");
-  assertEquals(receivedMessages[0].data, "transformed-42");
+  assert.strictEqual(receivedMessages.length, 1);
+  assert.strictEqual(receivedMessages[0].type, "parent");
+  assert.strictEqual(receivedMessages[0].data, "transformed-42");
 });
 
-Deno.test("updateUnknown - logs warning and returns state unchanged", () => {
+test("updateUnknown - logs warning and returns state unchanged", () => {
   const originalWarn = console.warn;
   let warningMessage = "";
 
@@ -216,8 +211,8 @@ Deno.test("updateUnknown - logs warning and returns state unchanged", () => {
 
     const result = updateUnknown(state, unknownMsg);
 
-    assertEquals(result, state);
-    assertEquals(
+    assert.strictEqual(result, state);
+    assert.strictEqual(
       warningMessage,
       'Unknown message {"type":"unknown","data":"test"}',
     );

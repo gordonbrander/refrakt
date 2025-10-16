@@ -1,27 +1,17 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
+    "module": "NodeNext",
     "lib": ["ES2022", "DOM"],
-    "moduleResolution": "bundler",
+    "moduleResolution": "nodenext",
     "declaration": true,
     "outDir": "./dist",
     "rootDir": "./",
     "strict": true,
-    "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
     "allowImportingTsExtensions": false
   },
-  "include": [
-    "*.ts",
-    "middleware/*.ts"
-  ],
-  "exclude": [
-    "*.test.ts",
-    "middleware/*.test.ts",
-    "dist",
-    "node_modules"
-  ]
+  "include": ["*.ts", "middleware/*.ts"],
+  "exclude": ["dist", "node_modules"]
 }

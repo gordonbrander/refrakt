@@ -1,7 +1,8 @@
-import { assertEquals } from "@std/assert";
-import { type Fx, fx } from "./fx.ts";
-import { type Reducer, store } from "../store.ts";
-import { pipe } from "../pipe.ts";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { type Fx, fx } from "./fx.js";
+import { type Reducer, store } from "../store.js";
+import { pipe } from "../pipe.js";
 
 // Test types
 type CounterMsg =
@@ -23,7 +24,7 @@ type CounterState = {
 // Helper function to create a promise that resolves after a delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-Deno.test("fx - handles simple async effects", async () => {
+test("fx - handles simple async effects", async () => {
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
     switch (msg.type) {
       case "increment":
@@ -53,15 +54,15 @@ Deno.test("fx - handles simple async effects", async () => {
   );
 
   counterStore.send({ type: "async_increment" });
-  assertEquals(counterStore.get().loading, true);
+  assert.strictEqual(counterStore.get().loading, true);
 
   // Wait for async effects to complete
   await delay(20);
 
-  assertEquals(counterStore.get().count, 6); // 0 + 1 + 5
+  assert.strictEqual(counterStore.get().count, 6); // 0 + 1 + 5
 });
 
-Deno.test("fx - handles multiple yielded messages", async () => {
+test("fx - handles multiple yielded messages", async () => {
   const messages: CounterMsg[] = [];
 
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
@@ -99,16 +100,16 @@ Deno.test("fx - handles multiple yielded messages", async () => {
   // Wait for all async effects
   await delay(20);
 
-  assertEquals(counterStore.get().count, 2); // +1 +1 -1 +1 = 2
-  assertEquals(messages.length, 5); // multi_step + 4 yielded messages
-  assertEquals(messages[0].type, "multi_step");
-  assertEquals(messages[1].type, "increment");
-  assertEquals(messages[2].type, "increment");
-  assertEquals(messages[3].type, "decrement");
-  assertEquals(messages[4].type, "increment");
+  assert.strictEqual(counterStore.get().count, 2); // +1 +1 -1 +1 = 2
+  assert.strictEqual(messages.length, 5); // multi_step + 4 yielded messages
+  assert.strictEqual(messages[0].type, "multi_step");
+  assert.strictEqual(messages[1].type, "increment");
+  assert.strictEqual(messages[2].type, "increment");
+  assert.strictEqual(messages[3].type, "decrement");
+  assert.strictEqual(messages[4].type, "increment");
 });
 
-Deno.test("fx - ignores messages that don't trigger effects", async () => {
+test("fx - ignores messages that don't trigger effects", async () => {
   const messages: CounterMsg[] = [];
 
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
@@ -137,17 +138,17 @@ Deno.test("fx - ignores messages that don't trigger effects", async () => {
   );
 
   counterStore.send({ type: "no_effect" });
-  assertEquals(messages.length, 1);
-  assertEquals(messages[0].type, "no_effect");
+  assert.strictEqual(messages.length, 1);
+  assert.strictEqual(messages[0].type, "no_effect");
 
   await delay(10);
 
   // No additional messages should have been sent
-  assertEquals(messages.length, 1);
-  assertEquals(counterStore.get().count, 0);
+  assert.strictEqual(messages.length, 1);
+  assert.strictEqual(counterStore.get().count, 0);
 });
 
-Deno.test("fx - can access current state", async () => {
+test("fx - can access current state", async () => {
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
     switch (msg.type) {
       case "increment":
@@ -178,10 +179,10 @@ Deno.test("fx - can access current state", async () => {
 
   await delay(10);
 
-  assertEquals(counterStore.get().count, 10); // 5 * 2
+  assert.strictEqual(counterStore.get().count, 10); // 5 * 2
 });
 
-Deno.test("fx - handles errors gracefully", async () => {
+test("fx - handles errors gracefully", async () => {
   const originalWarn = console.warn;
   let warningMessage = "";
 
@@ -202,7 +203,6 @@ Deno.test("fx - handles errors gracefully", async () => {
       }
     };
 
-    // deno-lint-ignore require-yield
     const testFx: Fx<CounterState, CounterMsg> = async function* (
       _get,
       msg,
@@ -219,21 +219,21 @@ Deno.test("fx - handles errors gracefully", async () => {
     );
 
     counterStore.send({ type: "async_error" });
-    assertEquals(counterStore.get().loading, true);
+    assert.strictEqual(counterStore.get().loading, true);
 
     await delay(10);
 
     // Store state should remain unchanged after error
-    assertEquals(counterStore.get().count, 0);
-    assertEquals(counterStore.get().loading, true);
-    assertEquals(warningMessage, "Error in fx");
+    assert.strictEqual(counterStore.get().count, 0);
+    assert.strictEqual(counterStore.get().loading, true);
+    assert.strictEqual(warningMessage, "Error in fx");
   } finally {
     // Restore console.warn
     console.warn = originalWarn;
   }
 });
 
-Deno.test("fx - works with empty generator", async () => {
+test("fx - works with empty generator", async () => {
   const messages: CounterMsg[] = [];
 
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
@@ -241,7 +241,6 @@ Deno.test("fx - works with empty generator", async () => {
     return state;
   };
 
-  // deno-lint-ignore require-yield
   const testFx: Fx<CounterState, CounterMsg> = async function* (
     _get,
     _msg,
@@ -259,11 +258,11 @@ Deno.test("fx - works with empty generator", async () => {
 
   await delay(10);
 
-  assertEquals(messages.length, 1);
-  assertEquals(messages[0].type, "increment");
+  assert.strictEqual(messages.length, 1);
+  assert.strictEqual(messages[0].type, "increment");
 });
 
-Deno.test("fx - preserves message order", async () => {
+test("fx - preserves message order", async () => {
   const processedMessages: string[] = [];
 
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
@@ -295,14 +294,14 @@ Deno.test("fx - preserves message order", async () => {
 
   await delay(10);
 
-  assertEquals(processedMessages, [
+  assert.deepStrictEqual(processedMessages, [
     "reducer:async_increment",
     "fx:async_increment",
     "reducer:increment",
   ]);
 });
 
-Deno.test("fx - can chain multiple async operations", async () => {
+test("fx - can chain multiple async operations", async () => {
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
     switch (msg.type) {
       case "increment":
@@ -341,10 +340,10 @@ Deno.test("fx - can chain multiple async operations", async () => {
 
   await delay(20);
 
-  assertEquals(counterStore.get().count, 12); // 0 + 1 + 1 + 10
+  assert.strictEqual(counterStore.get().count, 12); // 0 + 1 + 1 + 10
 });
 
-Deno.test("fx - runs concurrently for multiple messages", async () => {
+test("fx - runs concurrently for multiple messages", async () => {
   const timestamps: number[] = [];
 
   const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
@@ -378,10 +377,10 @@ Deno.test("fx - runs concurrently for multiple messages", async () => {
 
   await delay(20);
 
-  assertEquals(counterStore.get().count, 3);
-  assertEquals(timestamps.length, 3);
+  assert.strictEqual(counterStore.get().count, 3);
+  assert.strictEqual(timestamps.length, 3);
 
   // All should complete around the same time (within 5ms of each other)
   const timeDiff = Math.max(...timestamps) - Math.min(...timestamps);
-  assertEquals(timeDiff < 5, true);
+  assert.strictEqual(timeDiff < 5, true);
 });
