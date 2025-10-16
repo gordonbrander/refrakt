@@ -1,0 +1,72 @@
+{
+  "name": "signal-store",
+  "version": "0.1.0",
+  "description": "A simple, lightweight, scalable store built on top of signals",
+  "type": "module",
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.js"
+    },
+    "./store": {
+      "types": "./dist/store.d.ts",
+      "import": "./dist/store.js"
+    },
+    "./signal": {
+      "types": "./dist/signal.d.ts",
+      "import": "./dist/signal.js"
+    },
+    "./iter": {
+      "types": "./dist/iter.d.ts",
+      "import": "./dist/iter.js"
+    },
+    "./pipe": {
+      "types": "./dist/pipe.d.ts",
+      "import": "./dist/pipe.js"
+    },
+    "./middleware/logger": {
+      "types": "./dist/middleware/logger.d.ts",
+      "import": "./dist/middleware/logger.js"
+    },
+    "./middleware/fx": {
+      "types": "./dist/middleware/fx.d.ts",
+      "import": "./dist/middleware/fx.js"
+    },
+    "./middleware/scope": {
+      "types": "./dist/middleware/scope.d.ts",
+      "import": "./dist/middleware/scope.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE-MIT"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "deno test --allow-all"
+  },
+  "keywords": [
+    "signals",
+    "state-management",
+    "reactive",
+    "store",
+    "tc39",
+    "lit"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "signal-polyfill": "^0.2.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  }
+}

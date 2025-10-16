@@ -25,6 +25,12 @@
     "dependencies": [
       "jsr:@std/assert@1",
       "npm:signal-polyfill@~0.2.2"
-    ]
+    ],
+    "packageJson": {
+      "dependencies": [
+        "npm:signal-polyfill@~0.2.2",
+        "npm:typescript@^5.7.2"
+      ]
+    }
   }
 }

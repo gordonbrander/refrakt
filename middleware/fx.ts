@@ -1,5 +1,5 @@
-import { type Store } from "../store.ts";
-import { peek } from "../signal.ts";
+import { type Store } from "../store.js";
+import { peek } from "../signal.js";
 
 export type Fx<Model, Msg> = (
   state: () => Model,

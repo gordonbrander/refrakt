@@ -1,5 +1,5 @@
-import { type Store } from "../store.ts";
-import { peek } from "../signal.ts";
+import { type Store } from "../store.js";
+import { peek } from "../signal.js";
 
 /**
  * Logger middleware that logs messages and state changes to the console.

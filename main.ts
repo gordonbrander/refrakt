@@ -1,2 +1,2 @@
-export * from "./store.ts";
-export * as Signal from "./signal.ts";
+export * from "./store.js";
+export * as Signal from "./signal.js";

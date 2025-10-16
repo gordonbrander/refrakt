@@ -1,4 +1,4 @@
-import { AnySignal, signal } from "./signal.ts";
+import { AnySignal, signal } from "./signal.js";
 
 /**
  * A tagged message. Convenience type for simple messages with a
