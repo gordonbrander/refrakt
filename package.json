@@ -3,38 +3,36 @@
   "version": "0.1.0",
   "description": "A simple, lightweight, scalable store built on top of signals",
   "type": "module",
-  "main": "./dist/main.js",
-  "types": "./dist/main.d.ts",
   "exports": {
     ".": {
       "types": "./dist/main.d.ts",
       "import": "./dist/main.js"
     },
-    "./store": {
+    "./store.js": {
       "types": "./dist/store.d.ts",
       "import": "./dist/store.js"
     },
-    "./signal": {
+    "./signal.js": {
       "types": "./dist/signal.d.ts",
       "import": "./dist/signal.js"
     },
-    "./iter": {
+    "./iter.js": {
       "types": "./dist/iter.d.ts",
       "import": "./dist/iter.js"
     },
-    "./pipe": {
+    "./pipe.js": {
       "types": "./dist/pipe.d.ts",
       "import": "./dist/pipe.js"
     },
-    "./middleware/logger": {
+    "./middleware/logger.js": {
       "types": "./dist/middleware/logger.d.ts",
       "import": "./dist/middleware/logger.js"
     },
-    "./middleware/fx": {
+    "./middleware/fx.js": {
       "types": "./dist/middleware/fx.d.ts",
       "import": "./dist/middleware/fx.js"
     },
-    "./middleware/scope": {
+    "./middleware/scope.js": {
       "types": "./dist/middleware/scope.d.ts",
       "import": "./dist/middleware/scope.js"
     }
@@ -54,10 +52,9 @@
     "state-management",
     "reactive",
     "store",
-    "tc39",
     "lit"
   ],
-  "author": "",
+  "author": "Gordon Brander",
   "license": "MIT",
   "dependencies": {
     "signal-polyfill": "^0.2.2"
@@ -67,6 +64,6 @@
   },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/gordonbrander/signal-store"
   }
 }
