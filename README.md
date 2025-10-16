@@ -187,7 +187,7 @@ const clockFx: Fx<AppState, AppMsg> = async function* (state, msg) {
 };
 ```
 
-Because effects are just async generators, they can be easily composed and mapped. The `iter` namespace provides a handful of useful utility functions for merging and mapping async generators:
+Because effects are just async generators, they can be easily composed and mapped. The `iter` submodule provides a handful of useful utility functions for merging and mapping async generators:
 
 - `mergeAsync(...iterables)` - Merge multiple async iterables, yielding values in interleaved order as they become available
 - `sequenceAsync(...iterables)` - Sequence async iterables, yielding all values from the first before moving to the next
