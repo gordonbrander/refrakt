@@ -91,7 +91,7 @@ Store can be used as a single central application store, or you can create multi
 The signals module re-exports the TC39 signals polyfill, and provides a handful of convenience functions.
 
 ```typescript
-import { signal, computed, effect } from './signal.ts';
+import { signal, computed, effect } from 'signal-store/signal.ts';
 
 // Create a `State` signal
 const count = signal(10);
@@ -135,9 +135,9 @@ type Fx<Model, Msg> = (
 The effect generator function is called for each new message sent to the store, allowing it to perform async work in response and yield back zero or more messages.
 
 ```typescript
-import { pipe } from './pipe.ts';
-import { store } from './store.ts';
-import { fx, type Fx } from './middleware/fx.ts';
+import { store } from 'signal-store';
+import { pipe } from 'signal-store/pipe.ts';
+import { fx, type Fx } from 'signal-store/middleware/fx.ts';
 
 const fetchProfileFx: Fx<AppState, AppMsg> = async function* (state, msg) {
   if (msg.type === "fetch-profile") {
@@ -198,9 +198,9 @@ Because effects are just async generators, they can be easily composed and mappe
 Logs all messages and state changes to the console:
 
 ```typescript
-import { pipe } from './pipe.ts';
-import { store } from './store.ts';
-import { logger } from './middleware/logger.ts';
+import { store } from 'signal-store';
+import { pipe } from 'signal-store/pipe.ts';
+import { logger } from 'signal-store/middleware/logger.ts';
 
 const myStore = pipe(
   store(update, initialState),
@@ -219,9 +219,9 @@ MyStore: > { count: 1 }
 Scope lets you create a scoped child store from a parent store. It returns a new store that is indistinguishable from a top-level store. However, this child store's state is derived from the parent state, and all messages are routed through the parent store.
 
 ```typescript
-import { pipe } from './pipe.ts';
-import { store } from './store.ts';
-import { scope } from './middleware/scope.ts';
+import { store } from 'signal-store';
+import { pipe } from 'signal-store/pipe.ts';
+import { scope } from 'signal-store/middleware/scope.ts';
 
 const childStore = pipe(
   parentStore,
@@ -251,9 +251,10 @@ const myStore = loggerMiddleware(store(update, initial));
 Simple! However, if you're applying more than one middleware, these nested function calls can get a little tedious. `pipe()` makes this a bit more ergonomic. It applies multiple middleware functions to the store from left-to-right, returning the final decorated store:
 
 ```typescript
-import { pipe } from './pipe.ts';
-import { store } from './store.ts';
-import { logger, fx } from './middleware/index.ts';
+import { store } from 'signal-store';
+import { pipe } from 'signal-store/pipe.ts';
+import { fx } from 'signal-store/middleware/fx.ts';
+import { logger } from 'signal-store/middleware/logger.ts';
 
 const counterStore = pipe(
   store(update, { count: 0 }),
