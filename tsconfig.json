@@ -6,12 +6,12 @@
     "moduleResolution": "nodenext",
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": "./src",
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": false
   },
-  "include": ["*.ts", "middleware/*.ts"],
+  "include": ["src/**.ts"],
   "exclude": ["dist", "node_modules"]
 }
