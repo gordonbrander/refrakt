@@ -7,6 +7,7 @@
     "./": "./main.ts",
     "./store.ts": "./store.ts",
     "./signal.ts": "./signal.ts",
+    "./iter.ts": "./iter.ts",
     "./pipe.ts": "./pipe.ts",
     "./middleware/logger.ts": "./middleware/logger.ts",
     "./middleware/fx.ts": "./middleware/fx.ts",
