@@ -48,7 +48,7 @@ Deno.test("fx - handles simple async effects", async () => {
   };
 
   const counterStore = pipe(
-    store(counterReducer, { count: 0, loading: false }),
+    store(counterReducer, { count: 0, loading: false } as CounterState),
     fx(testFx),
   );
 
