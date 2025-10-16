@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { computed, effect, peek, signal } from "./signals.ts";
+import { computed, effect, peek, signal } from "./signal.ts";
 
 Deno.test("signal - creates and updates state", () => {
   const count = signal(0);

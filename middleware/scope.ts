@@ -1,5 +1,5 @@
 import { forward, type Store } from "../store.ts";
-import { computed } from "../signals.ts";
+import { computed } from "../signal.ts";
 
 /**
  * Create a scoped store.

@@ -91,7 +91,7 @@ Store can be used as a single central application store, or you can create multi
 The signals module re-exports the TC39 signals polyfill, and provides a handful of convenience functions.
 
 ```typescript
-import { signal, computed, effect } from './signals.ts';
+import { signal, computed, effect } from './signal.ts';
 
 // Create a `State` signal
 const count = signal(10);
