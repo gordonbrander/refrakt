@@ -1,7 +1,6 @@
 import { assertEquals } from "@std/assert";
 import {
   forward,
-  type Middleware,
   msg,
   type Reducer,
   store,
@@ -47,10 +46,7 @@ Deno.test("store - creates store with initial state", () => {
     }
   };
 
-  const counterStore = store({
-    state: 0,
-    update: counterReducer,
-  });
+  const counterStore = store(counterReducer, 0);
 
   assertEquals(counterStore.get(), 0);
 });
@@ -71,10 +67,7 @@ Deno.test("store - handles messages through send", () => {
     }
   };
 
-  const counterStore = store({
-    state: 0,
-    update: counterReducer,
-  });
+  const counterStore = store(counterReducer, 0);
 
   counterStore.send({ type: "increment" });
   assertEquals(counterStore.get(), 1);
@@ -124,10 +117,7 @@ Deno.test("store - works with complex state", () => {
     }
   };
 
-  const todoStore = store({
-    state: { todos: [], nextId: 1 },
-    update: todoReducer,
-  });
+  const todoStore = store(todoReducer, { todos: [], nextId: 1 });
 
   assertEquals(todoStore.get().todos.length, 0);
 
@@ -147,151 +137,6 @@ Deno.test("store - works with complex state", () => {
   todoStore.send({ type: "remove", id: 1 });
   assertEquals(todoStore.get().todos.length, 1);
   assertEquals(todoStore.get().todos[0].text, "Walk dog");
-});
-
-Deno.test("store - applies middleware", () => {
-  const counterReducer: Reducer<number, CounterMsg> = (state, message) => {
-    switch (message.type) {
-      case "increment":
-        return state + 1;
-      case "decrement":
-        return state - 1;
-      default:
-        return updateUnknown(state, message);
-    }
-  };
-
-  const logs: string[] = [];
-
-  const loggingMiddleware: Middleware<number, CounterMsg> =
-    (get) => (send) => (msg) => {
-      logs.push(`Before: ${get()}, Message: ${JSON.stringify(msg)}`);
-      send(msg);
-      logs.push(`After: ${get()}`);
-    };
-
-  const counterStore = store({
-    state: 0,
-    update: counterReducer,
-    middleware: [loggingMiddleware],
-  });
-
-  counterStore.send({ type: "increment" });
-
-  assertEquals(logs.length, 2);
-  assertEquals(logs[0], 'Before: 0, Message: {"type":"increment"}');
-  assertEquals(logs[1], "After: 1");
-  assertEquals(counterStore.get(), 1);
-});
-
-Deno.test("store - applies multiple middleware in order", () => {
-  const counterReducer: Reducer<number, CounterMsg> = (state, message) => {
-    switch (message.type) {
-      case "increment":
-        return state + 1;
-      default:
-        return updateUnknown(state, message);
-    }
-  };
-
-  const execution: string[] = [];
-
-  const middleware1: Middleware<number, CounterMsg> = () => (send) => (msg) => {
-    execution.push("middleware1-before");
-    send(msg);
-    execution.push("middleware1-after");
-  };
-
-  const middleware2: Middleware<number, CounterMsg> = () => (send) => (msg) => {
-    execution.push("middleware2-before");
-    send(msg);
-    execution.push("middleware2-after");
-  };
-
-  const counterStore = store({
-    state: 0,
-    update: counterReducer,
-    middleware: [middleware1, middleware2],
-  });
-
-  counterStore.send({ type: "increment" });
-
-  assertEquals(execution, [
-    "middleware2-before",
-    "middleware1-before",
-    "middleware1-after",
-    "middleware2-after",
-  ]);
-});
-
-Deno.test("store - middleware can access current state", () => {
-  const counterReducer: Reducer<number, CounterMsg> = (state, message) => {
-    switch (message.type) {
-      case "increment":
-        return state + 1;
-      case "set":
-        return message.value;
-      default:
-        return updateUnknown(state, message);
-    }
-  };
-
-  const capturedStates: number[] = [];
-
-  const stateCapturingMiddleware: Middleware<number, CounterMsg> =
-    (getState) => (send) => (msg) => {
-      capturedStates.push(getState());
-      send(msg);
-      capturedStates.push(getState());
-    };
-
-  const counterStore = store({
-    state: 5,
-    update: counterReducer,
-    middleware: [stateCapturingMiddleware],
-  });
-
-  counterStore.send({ type: "increment" });
-  counterStore.send({ type: "set", value: 10 });
-
-  assertEquals(capturedStates, [5, 6, 6, 10]);
-});
-
-Deno.test("store - middleware can prevent message sending", () => {
-  const counterReducer: Reducer<number, CounterMsg> = (state, message) => {
-    switch (message.type) {
-      case "increment":
-        return state + 1;
-      case "decrement":
-        return state - 1;
-      default:
-        return updateUnknown(state, message);
-    }
-  };
-
-  const preventNegativeMiddleware: Middleware<number, CounterMsg> =
-    (getState) => (send) => (msg) => {
-      if (msg.type === "decrement" && getState() <= 0) {
-        // Don't send the message if it would make the counter negative
-        return;
-      }
-      send(msg);
-    };
-
-  const counterStore = store({
-    state: 1,
-    update: counterReducer,
-    middleware: [preventNegativeMiddleware],
-  });
-
-  counterStore.send({ type: "decrement" });
-  assertEquals(counterStore.get(), 0);
-
-  counterStore.send({ type: "decrement" });
-  assertEquals(counterStore.get(), 0); // Should not go negative
-
-  counterStore.send({ type: "increment" });
-  assertEquals(counterStore.get(), 1);
 });
 
 Deno.test("msg - creates tagged message", () => {

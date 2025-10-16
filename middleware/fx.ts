@@ -1,12 +1,15 @@
-import type { Get, Middleware, Send } from "../store.ts";
+import { type Store } from "../store.ts";
 import { peek } from "../signals.ts";
 
 export type Fx<Model, Msg> = (
-  state: Get<Model>,
+  state: () => Model,
   msg: Msg,
 ) => AsyncGenerator<Msg>;
 
-const forkFx = async <Msg>(generator: AsyncGenerator<Msg>, send: Send<Msg>) => {
+const forkFx = async <Msg>(
+  generator: AsyncGenerator<Msg>,
+  send: (msg: Msg) => void,
+) => {
   try {
     for await (const msg of generator) {
       send(msg);
@@ -28,7 +31,7 @@ const forkFx = async <Msg>(generator: AsyncGenerator<Msg>, send: Send<Msg>) => {
  *
  * @usage
  * ```ts
- * import { fx } from "signal-store/middleware/fx.ts";
+ * import { store, pipe, middleware } from "signal-store";
  *
  * async function* effects(state: () => Model, msg: Msg) {
  *    if (msg.type === "some-action") {
@@ -36,26 +39,30 @@ const forkFx = async <Msg>(generator: AsyncGenerator<Msg>, send: Send<Msg>) => {
  *    }
  * }
  *
- * const state = store(
- *   state,
- *   update,
- *   middleware: [fx(effects)];
+ * const myStore = pipe(
+ *   store(update, initial),
+ *   middleware.fx(effects),
  * );
  * ```
  */
 export const fx = <Model, Msg>(
   fx: Fx<Model, Msg>,
-): Middleware<Model, Msg> =>
+) =>
 (
-  get: Get<Model>,
-) => {
-  const getUntracked = () => peek(get);
+  { get, send }: Store<Model, Msg>,
+): Store<Model, Msg> => {
+  const peekState = () => peek(get);
 
-  return (next: Send<Msg>) => (msg: Msg) => {
+  const sendWithFx = (msg: Msg) => {
     // First, apply the message to update the state
-    next(msg);
-    // Then generate and fork the fx
-    const effect = fx(getUntracked, msg);
-    forkFx(effect, next);
+    send(msg);
+    // Then generate and fork the effect
+    const effect = fx(peekState, msg);
+    forkFx(effect, sendWithFx);
+  };
+
+  return {
+    get,
+    send: sendWithFx,
   };
 };

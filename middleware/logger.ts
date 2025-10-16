@@ -1,8 +1,15 @@
-import type { Get, Middleware, Send } from "../store.ts";
+import { type Store } from "../store.ts";
+import { peek } from "../signals.ts";
 
 /**
- * Logger middleware that logs messages and state changes.
- * Replaces the debug logging functionality from the store.
+ * Logger middleware that logs messages and state changes to the console.
+ * @usage
+ * ```ts
+ * const myStore = pipe(
+ *   reducer(update, initial),
+ *   logger(),
+ * );
+ * ```
  */
 export const logger = <Model, Msg>({
   prefix = "",
@@ -10,10 +17,18 @@ export const logger = <Model, Msg>({
 }: {
   log?: boolean;
   prefix?: string;
-} = {}): Middleware<Model, Msg> => {
-  return (get: Get<Model>) => (next: Send<Msg>) => (msg: Msg) => {
+} = {}) =>
+(
+  { get, send }: Store<Model, Msg>,
+): Store<Model, Msg> => {
+  const sendWithLogging = (msg: Msg) => {
     if (log) console.log(`${prefix}<`, msg);
-    next(msg);
-    if (log) console.log(`${prefix}>`, get());
+    send(msg);
+    if (log) console.log(`${prefix}>`, peek(get));
+  };
+
+  return {
+    get,
+    send: sendWithLogging,
   };
 };

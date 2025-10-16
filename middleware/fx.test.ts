@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { type Fx, fx } from "./fx.ts";
 import { type Reducer, store } from "../store.ts";
+import { pipe } from "../pipe.ts";
 
 // Test types
 type CounterMsg =
@@ -46,11 +47,10 @@ Deno.test("fx - handles simple async effects", async () => {
     }
   };
 
-  const counterStore = store({
-    state: { count: 0, loading: false },
-    update: counterReducer,
-    middleware: [fx(testFx)],
-  });
+  const counterStore = pipe(
+    store(counterReducer, { count: 0, loading: false }),
+    fx(testFx),
+  );
 
   counterStore.send({ type: "async_increment" });
   assertEquals(counterStore.get().loading, true);
@@ -89,11 +89,10 @@ Deno.test("fx - handles multiple yielded messages", async () => {
     }
   };
 
-  const counterStore = store({
-    state: { count: 0, loading: false },
-    update: counterReducer,
-    middleware: [fx(testFx)],
-  });
+  const counterStore = pipe(
+    store(counterReducer, { count: 0, loading: false }),
+    fx(testFx),
+  );
 
   counterStore.send({ type: "multi_step" });
 
@@ -132,11 +131,10 @@ Deno.test("fx - ignores messages that don't trigger effects", async () => {
     // no_effect message doesn't trigger any fx
   };
 
-  const counterStore = store({
-    state: { count: 0, loading: false },
-    update: counterReducer,
-    middleware: [fx(testFx)],
-  });
+  const counterStore = pipe(
+    store(counterReducer, { count: 0, loading: false }),
+    fx(testFx),
+  );
 
   counterStore.send({ type: "no_effect" });
   assertEquals(messages.length, 1);
@@ -171,11 +169,10 @@ Deno.test("fx - can access current state", async () => {
     }
   };
 
-  const counterStore = store({
-    state: { count: 5, loading: false },
-    update: counterReducer,
-    middleware: [fx(testFx)],
-  });
+  const counterStore = pipe(
+    store(counterReducer, { count: 5, loading: false }),
+    fx(testFx),
+  );
 
   counterStore.send({ type: "async_double" });
 
@@ -216,11 +213,10 @@ Deno.test("fx - handles errors gracefully", async () => {
       }
     };
 
-    const counterStore = store({
-      state: { count: 0, loading: false },
-      update: counterReducer,
-      middleware: [fx(testFx)],
-    });
+    const counterStore = pipe(
+      store(counterReducer, { count: 0, loading: false }),
+      fx(testFx),
+    );
 
     counterStore.send({ type: "async_error" });
     assertEquals(counterStore.get().loading, true);
@@ -254,11 +250,10 @@ Deno.test("fx - works with empty generator", async () => {
     await delay(5);
   };
 
-  const counterStore = store({
-    state: { count: 0, loading: false },
-    update: counterReducer,
-    middleware: [fx(testFx)],
-  });
+  const counterStore = pipe(
+    store(counterReducer, { count: 0, loading: false }),
+    fx(testFx),
+  );
 
   counterStore.send({ type: "increment" });
 
@@ -291,11 +286,10 @@ Deno.test("fx - preserves message order", async () => {
     }
   };
 
-  const counterStore = store({
-    state: { count: 0, loading: false },
-    update: counterReducer,
-    middleware: [fx(testFx)],
-  });
+  const counterStore = pipe(
+    store(counterReducer, { count: 0, loading: false }),
+    fx(testFx),
+  );
 
   counterStore.send({ type: "async_increment" });
 
@@ -338,11 +332,10 @@ Deno.test("fx - can chain multiple async operations", async () => {
     }
   };
 
-  const counterStore = store({
-    state: { count: 0, loading: false },
-    update: counterReducer,
-    middleware: [fx(testFx)],
-  });
+  const counterStore = pipe(
+    store(counterReducer, { count: 0, loading: false }),
+    fx(testFx),
+  );
 
   counterStore.send({ type: "async_increment" });
 
@@ -373,11 +366,10 @@ Deno.test("fx - runs concurrently for multiple messages", async () => {
     }
   };
 
-  const counterStore = store({
-    state: { count: 0, loading: false },
-    update: counterReducer,
-    middleware: [fx(testFx)],
-  });
+  const counterStore = pipe(
+    store(counterReducer, { count: 0, loading: false }),
+    fx(testFx),
+  );
 
   // Send multiple async messages quickly
   counterStore.send({ type: "async_increment" });
