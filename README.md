@@ -123,9 +123,7 @@ count.set(20); // Logs: "Count: 20 Doubled: 40"
 cleanup(); // Stop the effect
 ```
 
-## Middleware
-
-### Fx: managed effects middleware
+## Fx middleware
 
 The optional `fx` middleware provides a powerful way to handle side effects using async generators.
 
@@ -198,7 +196,7 @@ Because effects are just async generators, they can be easily composed and mappe
 - `sequenceAsync(...iterables)` - Sequence async iterables, yielding all values from the first before moving to the next
 - `mapAsync(iterable, transform)` - Transform each value in an async iterable using a sync or async function
 
-### Logger
+## Logger middleware
 
 Logs all actions and state changes to the console:
 
@@ -218,7 +216,7 @@ MyStore: < { type: 'increment' }
 MyStore: > { count: 1 }
 ```
 
-### Scope
+## Scope middleware
 
 Scope lets you create a scoped child store from a parent store. It returns a new store that is indistinguishable from a top-level store. However, this child store's state is derived from the parent state, and all messages are routed through the parent store.
 
@@ -240,7 +238,7 @@ const childStore = pipe(
 );
 ```
 
-### Custom Middleware
+## Custom Middleware
 
 Middleware are just functions of `(store: Store<Model, Msg>) => Store<Model, Msg>` that wrap the store, returning a new store with enhanced behavior.
 
