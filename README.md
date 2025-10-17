@@ -272,8 +272,8 @@ import * as ChildComponent from "./child-component.js";
 const childStore = pipe(
   parentStore,
   scope(
-  (state: ParentModel) => state.child,
-    (msg: ChildMsg) => ({ type: "child", msg })
+    (state: ParentModel) => state.child,
+    (msg: ChildAction): ParentAction => ({ type: "child", msg })
   ),
 );
 
