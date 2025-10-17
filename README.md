@@ -20,10 +20,10 @@ import { customElement } from 'lit/decorators.js';
 import { html } from '@lit-labs/signals';
 
 type Model = { count: number };
-type Msg = { type: 'inc' } | { type: 'dec' };
+type Action = { type: 'inc' } | { type: 'dec' };
 
-const updateCounter = (state: Model, msg: Msg) => {
-  switch (msg.type) {
+const updateCounter = (state: Model, action: Action) => {
+  switch (action.type) {
     case 'inc': return { count: state.count + 1 };
     case 'dec': return { count: state.count - 1 };
     default: return state;
@@ -55,21 +55,21 @@ class CounterApp extends LitElement {
 ```typescript
 import { store } from './store.js';
 
-type CounterMsg =
+type CounterAction =
   | { type: 'increment' }
   | { type: 'decrement' }
   | { type: 'set', value: number };
 
 type CounterModel = { count: number };
 
-const update = (state: CounterModel, msg: CounterMsg) => {
-  switch (msg.type) {
+const update = (state: CounterModel, action: CounterAction) => {
+  switch (action.type) {
     case 'increment':
       return { count: state.count + 1 };
     case 'decrement':
       return { count: state.count - 1 };
     case 'set':
-      return { count: msg.value };
+      return { count: action.value };
     default:
       return state;
   }
@@ -77,12 +77,12 @@ const update = (state: CounterModel, msg: CounterMsg) => {
 
 const counterStore = store(update, { count: 0 });
 
-// Send messages to update state
+// Send actions to update state
 counterStore.send({ type: 'increment' });
 console.log(counterStore.get().count); // 1
 ```
 
-The returned store can be used as a signal. You can `.send()` messages to the store to update it. The update function is responsible for taking the current state and the message, and returning the next state. There is no other way to update the store's state. This gives you consistent and predictable state management that is easy to test.
+The returned store can be used as a signal. You can `.send()` actions to the store to update it. The update function is responsible for taking the current state and the action, and returning the next state. There is no other way to update the store's state. This gives you consistent and predictable state management that is easy to test.
 
 Store can be used as a centralized store for application state, or you can create multiple stores for different parts of your application. Signals give you a lot of flexibility to mix and match approaches.
 
@@ -126,24 +126,24 @@ The optional `fx` middleware provides a powerful way to handle side effects usin
 Effects are modeled as async generators.
 
 ```typescript
-type Fx<Model, Msg> = (
+type Fx<Model, Action> = (
   state: () => Model, // Get current state
-  msg: Msg // Message triggering this effect
-) => AsyncGenerator<Msg>; // Yielded messages are sent back to store
+  action: Action // Action triggering this effect
+) => AsyncGenerator<Action>; // Yielded actions are sent back to store
 ```
 
-The effect generator function is called for each new message sent to the store, allowing it to perform async work in response and yield back zero or more messages.
+The effect generator function is called for each new action sent to the store, allowing it to perform async work in response and yield back zero or more actions.
 
 ```typescript
 import { store, pipe } from '@gordonb/signal-store';
 import { fx, type Fx } from '@gordonb/signal-store/middleware/fx.js';
 
-const fetchProfileFx: Fx<AppState, AppMsg> = async function* (state, msg) {
-  if (msg.type === "fetch-profile") {
+const fetchProfileFx: Fx<AppState, AppAction> = async function* (state, action) {
+  if (action.type === "fetch-profile") {
     const response = await fetch("/api/v1/profile", {
       method: "GET",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(msg.id),
+      body: JSON.stringify(action.id),
     });
 
     const json = await response.json();
@@ -170,13 +170,13 @@ appStore.send({ type: 'fetch-profile' });
 The effect generator function also receives a getter function that returns the current state. This allows effects to decide if they should keep running by checking the application state, giving us a simple mechanism for effect cancellation.
 
 ```typescript
-type AppMsg =
+type AppAction =
   | { type: 'start-clock' }
   | { type: 'stop-clock' }
   | { type: 'tick' };
 
-const clockFx: Fx<AppState, AppMsg> = async function* (state, msg) {
-  if (msg.type === "start-clock") {
+const clockFx: Fx<AppState, AppAction> = async function* (state, action) {
+  if (action.type === "start-clock") {
     // Run effect until application model says to stop
     while (state().isClockRunning === true) {
       yield { type: 'tick' };
@@ -194,7 +194,7 @@ Because effects are just async generators, they can be easily composed and mappe
 
 ## Logger middleware
 
-Logs all messages and state changes to the console:
+Logs all actions and state changes to the console:
 
 ```typescript
 import { store } from '@gordonb/signal-store';
@@ -227,10 +227,10 @@ const childStore = pipe(
   scope(
     // Get child state from parent state
     (state: Model) => state.child,
-    // Tag child messages, transforming them into parent messages
-    (msg: ChildMsg) => ({
+    // Tag child actions, transforming them into parent actions
+    (action: ChildAction) => ({
       type: "child",
-      value: msg
+      value: action
     })
   )
 );
@@ -271,13 +271,13 @@ Creating your own middleware functions is easy. Just write a function that takes
 ```typescript
 import type { Store } from './store.js';
 
-const timingMiddleware = <Model, Msg>() =>
-  (store: Store<Model, Msg>): Store<Model, Msg> => {
-    const timedSend = (msg: Msg) => {
+const timingMiddleware = <Model, Action>() =>
+  (store: Store<Model, Action>): Store<Model, Action> => {
+    const timedSend = (action: Action) => {
       const start = performance.now();
-      store.send(msg);
+      store.send(action);
       const duration = performance.now() - start;
-      console.log(`Message took ${duration}ms`);
+      console.log(`Action took ${duration}ms`);
     };
 
     return {
@@ -295,9 +295,9 @@ const myStore = pipe(
 
 ## Utility Functions
 
-- `msg(type, value)` - Create tagged messages: `msg('set', 42)` → `{ type: 'set', value: 42 }`
-- `forward(send, transform)` - Decorates send function so that it transform messages before sending
-- `updateUnknown(state, msg)` - Default handler for unknown messages (logs warning)
+- `action(type, value)` - Create tagged actions: `action('set', 42)` → `{ type: 'set', value: 42 }`
+- `forward(send, transform)` - Decorates send function so that it transform actions before sending
+- `updateUnknown(state, action)` - Default handler for unknown actions (logs warning)
 
 ## License
 

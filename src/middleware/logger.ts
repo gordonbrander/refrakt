@@ -2,7 +2,7 @@ import { type Store } from "../store.js";
 import { peek } from "../signal.js";
 
 /**
- * Logger middleware that logs messages and state changes to the console.
+ * Logger middleware that logs actions and state changes to the console.
  * @usage
  * ```ts
  * const myStore = pipe(
@@ -11,7 +11,7 @@ import { peek } from "../signal.js";
  * );
  * ```
  */
-export const logger = <Model, Msg>({
+export const logger = <Model, Action>({
   prefix = "",
   log = true,
 }: {
@@ -19,11 +19,11 @@ export const logger = <Model, Msg>({
   prefix?: string;
 } = {}) =>
 (
-  { get, send }: Store<Model, Msg>,
-): Store<Model, Msg> => {
-  const sendWithLogging = (msg: Msg) => {
-    if (log) console.log(`${prefix}<`, msg);
-    send(msg);
+  { get, send }: Store<Model, Action>,
+): Store<Model, Action> => {
+  const sendWithLogging = (action: Action) => {
+    if (log) console.log(`${prefix}<`, action);
+    send(action);
     if (log) console.log(`${prefix}>`, peek(get));
   };
 

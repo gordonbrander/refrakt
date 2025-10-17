@@ -5,7 +5,7 @@ import { type Reducer, store } from "../store.js";
 import { pipe } from "../pipe.js";
 
 // Test types
-type CounterMsg =
+type CounterAction =
   | { type: "increment" }
   | { type: "decrement" }
   | { type: "set"; value: number }
@@ -25,14 +25,14 @@ type CounterState = {
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 test("fx - handles simple async effects", async () => {
-  const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
-    switch (msg.type) {
+  const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+    switch (action.type) {
       case "increment":
         return { ...state, count: state.count + 1 };
       case "decrement":
         return { ...state, count: state.count - 1 };
       case "set":
-        return { ...state, count: msg.value };
+        return { ...state, count: action.value };
       case "async_increment":
         return { ...state, loading: true };
       default:
@@ -40,8 +40,8 @@ test("fx - handles simple async effects", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterMsg> = async function* (get, msg) {
-    if (msg.type === "async_increment") {
+  const testFx: Fx<CounterState, CounterAction> = async function* (get, action) {
+    if (action.type === "async_increment") {
       await delay(10);
       yield { type: "increment" };
       yield { type: "set", value: get().count + 5 };
@@ -62,12 +62,12 @@ test("fx - handles simple async effects", async () => {
   assert.strictEqual(counterStore.get().count, 6); // 0 + 1 + 5
 });
 
-test("fx - handles multiple yielded messages", async () => {
-  const messages: CounterMsg[] = [];
+test("fx - handles multiple yielded actions", async () => {
+  const actions: CounterAction[] = [];
 
-  const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
-    messages.push(msg);
-    switch (msg.type) {
+  const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+    actions.push(action);
+    switch (action.type) {
       case "increment":
         return { ...state, count: state.count + 1 };
       case "decrement":
@@ -79,8 +79,8 @@ test("fx - handles multiple yielded messages", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterMsg> = async function* (_get, msg) {
-    if (msg.type === "multi_step") {
+  const testFx: Fx<CounterState, CounterAction> = async function* (_get, action) {
+    if (action.type === "multi_step") {
       yield { type: "increment" };
       await delay(5);
       yield { type: "increment" };
@@ -101,20 +101,20 @@ test("fx - handles multiple yielded messages", async () => {
   await delay(20);
 
   assert.strictEqual(counterStore.get().count, 2); // +1 +1 -1 +1 = 2
-  assert.strictEqual(messages.length, 5); // multi_step + 4 yielded messages
-  assert.strictEqual(messages[0].type, "multi_step");
-  assert.strictEqual(messages[1].type, "increment");
-  assert.strictEqual(messages[2].type, "increment");
-  assert.strictEqual(messages[3].type, "decrement");
-  assert.strictEqual(messages[4].type, "increment");
+  assert.strictEqual(actions.length, 5); // multi_step + 4 yielded actions
+  assert.strictEqual(actions[0].type, "multi_step");
+  assert.strictEqual(actions[1].type, "increment");
+  assert.strictEqual(actions[2].type, "increment");
+  assert.strictEqual(actions[3].type, "decrement");
+  assert.strictEqual(actions[4].type, "increment");
 });
 
-test("fx - ignores messages that don't trigger effects", async () => {
-  const messages: CounterMsg[] = [];
+test("fx - ignores actions that don't trigger effects", async () => {
+  const actions: CounterAction[] = [];
 
-  const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
-    messages.push(msg);
-    switch (msg.type) {
+  const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+    actions.push(action);
+    switch (action.type) {
       case "increment":
         return { ...state, count: state.count + 1 };
       case "no_effect":
@@ -124,12 +124,12 @@ test("fx - ignores messages that don't trigger effects", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterMsg> = async function* (_get, msg) {
-    if (msg.type === "increment") {
+  const testFx: Fx<CounterState, CounterAction> = async function* (_get, action) {
+    if (action.type === "increment") {
       await delay(5);
       yield { type: "increment" };
     }
-    // no_effect message doesn't trigger any fx
+    // no_effect action doesn't trigger any fx
   };
 
   const counterStore = pipe(
@@ -138,23 +138,23 @@ test("fx - ignores messages that don't trigger effects", async () => {
   );
 
   counterStore.send({ type: "no_effect" });
-  assert.strictEqual(messages.length, 1);
-  assert.strictEqual(messages[0].type, "no_effect");
+  assert.strictEqual(actions.length, 1);
+  assert.strictEqual(actions[0].type, "no_effect");
 
   await delay(10);
 
-  // No additional messages should have been sent
-  assert.strictEqual(messages.length, 1);
+  // No additional actions should have been sent
+  assert.strictEqual(actions.length, 1);
   assert.strictEqual(counterStore.get().count, 0);
 });
 
 test("fx - can access current state", async () => {
-  const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
-    switch (msg.type) {
+  const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+    switch (action.type) {
       case "increment":
         return { ...state, count: state.count + 1 };
       case "set":
-        return { ...state, count: msg.value };
+        return { ...state, count: action.value };
       case "async_double":
         return { ...state, loading: true };
       default:
@@ -162,8 +162,8 @@ test("fx - can access current state", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterMsg> = async function* (get, msg) {
-    if (msg.type === "async_double") {
+  const testFx: Fx<CounterState, CounterAction> = async function* (get, action) {
+    if (action.type === "async_double") {
       const currentCount = get().count;
       await delay(5);
       yield { type: "set", value: currentCount * 2 };
@@ -192,8 +192,8 @@ test("fx - handles errors gracefully", async () => {
   };
 
   try {
-    const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
-      switch (msg.type) {
+    const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+      switch (action.type) {
         case "increment":
           return { ...state, count: state.count + 1 };
         case "async_error":
@@ -203,11 +203,11 @@ test("fx - handles errors gracefully", async () => {
       }
     };
 
-    const testFx: Fx<CounterState, CounterMsg> = async function* (
+    const testFx: Fx<CounterState, CounterAction> = async function* (
       _get,
-      msg,
+      action,
     ) {
-      if (msg.type === "async_error") {
+      if (action.type === "async_error") {
         await delay(5);
         throw new Error("Test error");
       }
@@ -234,16 +234,16 @@ test("fx - handles errors gracefully", async () => {
 });
 
 test("fx - works with empty generator", async () => {
-  const messages: CounterMsg[] = [];
+  const actions: CounterAction[] = [];
 
-  const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
-    messages.push(msg);
+  const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+    actions.push(action);
     return state;
   };
 
-  const testFx: Fx<CounterState, CounterMsg> = async function* (
+  const testFx: Fx<CounterState, CounterAction> = async function* (
     _get,
-    _msg,
+    _action,
   ) {
     // Empty generator - no yields
     await delay(5);
@@ -258,16 +258,16 @@ test("fx - works with empty generator", async () => {
 
   await delay(10);
 
-  assert.strictEqual(messages.length, 1);
-  assert.strictEqual(messages[0].type, "increment");
+  assert.strictEqual(actions.length, 1);
+  assert.strictEqual(actions[0].type, "increment");
 });
 
-test("fx - preserves message order", async () => {
-  const processedMessages: string[] = [];
+test("fx - preserves action order", async () => {
+  const processedActions: string[] = [];
 
-  const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
-    processedMessages.push(`reducer:${msg.type}`);
-    switch (msg.type) {
+  const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+    processedActions.push(`reducer:${action.type}`);
+    switch (action.type) {
       case "increment":
         return { ...state, count: state.count + 1 };
       case "async_increment":
@@ -277,9 +277,9 @@ test("fx - preserves message order", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterMsg> = async function* (_get, msg) {
-    if (msg.type === "async_increment") {
-      processedMessages.push(`fx:${msg.type}`);
+  const testFx: Fx<CounterState, CounterAction> = async function* (_get, action) {
+    if (action.type === "async_increment") {
+      processedActions.push(`fx:${action.type}`);
       await delay(5);
       yield { type: "increment" };
     }
@@ -294,7 +294,7 @@ test("fx - preserves message order", async () => {
 
   await delay(10);
 
-  assert.deepStrictEqual(processedMessages, [
+  assert.deepStrictEqual(processedActions, [
     "reducer:async_increment",
     "fx:async_increment",
     "reducer:increment",
@@ -302,12 +302,12 @@ test("fx - preserves message order", async () => {
 });
 
 test("fx - can chain multiple async operations", async () => {
-  const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
-    switch (msg.type) {
+  const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+    switch (action.type) {
       case "increment":
         return { ...state, count: state.count + 1 };
       case "set":
-        return { ...state, count: msg.value };
+        return { ...state, count: action.value };
       case "async_increment":
         return { ...state, loading: true };
       default:
@@ -315,8 +315,8 @@ test("fx - can chain multiple async operations", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterMsg> = async function* (get, msg) {
-    if (msg.type === "async_increment") {
+  const testFx: Fx<CounterState, CounterAction> = async function* (get, action) {
+    if (action.type === "async_increment") {
       // First async operation
       await delay(5);
       yield { type: "increment" };
@@ -343,11 +343,11 @@ test("fx - can chain multiple async operations", async () => {
   assert.strictEqual(counterStore.get().count, 12); // 0 + 1 + 1 + 10
 });
 
-test("fx - runs concurrently for multiple messages", async () => {
+test("fx - runs concurrently for multiple actions", async () => {
   const timestamps: number[] = [];
 
-  const counterReducer: Reducer<CounterState, CounterMsg> = (state, msg) => {
-    switch (msg.type) {
+  const counterReducer: Reducer<CounterState, CounterAction> = (state, action) => {
+    switch (action.type) {
       case "increment":
         timestamps.push(Date.now());
         return { ...state, count: state.count + 1 };
@@ -358,8 +358,8 @@ test("fx - runs concurrently for multiple messages", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterMsg> = async function* (_get, msg) {
-    if (msg.type === "async_increment") {
+  const testFx: Fx<CounterState, CounterAction> = async function* (_get, action) {
+    if (action.type === "async_increment") {
       await delay(10);
       yield { type: "increment" };
     }
@@ -370,7 +370,7 @@ test("fx - runs concurrently for multiple messages", async () => {
     fx(testFx),
   );
 
-  // Send multiple async messages quickly
+  // Send multiple async actions quickly
   counterStore.send({ type: "async_increment" });
   counterStore.send({ type: "async_increment" });
   counterStore.send({ type: "async_increment" });

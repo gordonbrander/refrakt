@@ -1,15 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { forward, msg, type Reducer, store, updateUnknown } from "./store.js";
+import { forward, action, type Reducer, store, updateUnknown } from "./store.js";
 
-// Test types for messaging
-type CounterMsg =
+// Test types for actions
+type CounterAction =
   | { type: "increment" }
   | { type: "decrement" }
   | { type: "set"; value: number }
   | { type: "add"; value: number };
 
-type TodoMsg =
+type TodoAction =
   | { type: "add"; text: string }
   | { type: "toggle"; id: number }
   | { type: "remove"; id: number };
@@ -26,18 +26,18 @@ interface TodoState {
 }
 
 test("store - creates store with initial state", () => {
-  const counterReducer: Reducer<number, CounterMsg> = (state, message) => {
-    switch (message.type) {
+  const counterReducer: Reducer<number, CounterAction> = (state, action) => {
+    switch (action.type) {
       case "increment":
         return state + 1;
       case "decrement":
         return state - 1;
       case "set":
-        return message.value;
+        return action.value;
       case "add":
-        return state + message.value;
+        return state + action.value;
       default:
-        return updateUnknown(state, message);
+        return updateUnknown(state, action);
     }
   };
 
@@ -46,19 +46,19 @@ test("store - creates store with initial state", () => {
   assert.strictEqual(counterStore.get(), 0);
 });
 
-test("store - handles messages through send", () => {
-  const counterReducer: Reducer<number, CounterMsg> = (state, message) => {
-    switch (message.type) {
+test("store - handles actions through send", () => {
+  const counterReducer: Reducer<number, CounterAction> = (state, action) => {
+    switch (action.type) {
       case "increment":
         return state + 1;
       case "decrement":
         return state - 1;
       case "set":
-        return message.value;
+        return action.value;
       case "add":
-        return state + message.value;
+        return state + action.value;
       default:
-        return updateUnknown(state, message);
+        return updateUnknown(state, action);
     }
   };
 
@@ -81,14 +81,14 @@ test("store - handles messages through send", () => {
 });
 
 test("store - works with complex state", () => {
-  const todoReducer: Reducer<TodoState, TodoMsg> = (state, message) => {
-    switch (message.type) {
+  const todoReducer: Reducer<TodoState, TodoAction> = (state, action) => {
+    switch (action.type) {
       case "add":
         return {
           ...state,
           todos: [...state.todos, {
             id: state.nextId,
-            text: message.text,
+            text: action.text,
             completed: false,
           }],
           nextId: state.nextId + 1,
@@ -97,7 +97,7 @@ test("store - works with complex state", () => {
         return {
           ...state,
           todos: state.todos.map((todo) =>
-            todo.id === message.id
+            todo.id === action.id
               ? { ...todo, completed: !todo.completed }
               : todo
           ),
@@ -105,10 +105,10 @@ test("store - works with complex state", () => {
       case "remove":
         return {
           ...state,
-          todos: state.todos.filter((todo) => todo.id !== message.id),
+          todos: state.todos.filter((todo) => todo.id !== action.id),
         };
       default:
-        return updateUnknown(state, message);
+        return updateUnknown(state, action);
     }
   };
 
@@ -134,66 +134,66 @@ test("store - works with complex state", () => {
   assert.strictEqual(todoStore.get().todos[0].text, "Walk dog");
 });
 
-test("msg - creates tagged message", () => {
-  const message = msg("test", 42);
+test("action - creates tagged action", () => {
+  const testAction = action("test", 42);
 
-  assert.strictEqual(message.type, "test");
-  assert.strictEqual(message.value, 42);
+  assert.strictEqual(testAction.type, "test");
+  assert.strictEqual(testAction.value, 42);
 });
 
-test("msg - works with different value types", () => {
-  const stringMsg = msg("string", "hello");
-  assert.strictEqual(stringMsg.type, "string");
-  assert.strictEqual(stringMsg.value, "hello");
+test("action - works with different value types", () => {
+  const stringAction = action("string", "hello");
+  assert.strictEqual(stringAction.type, "string");
+  assert.strictEqual(stringAction.value, "hello");
 
-  const objectMsg = msg("object", { key: "value" });
-  assert.strictEqual(objectMsg.type, "object");
-  assert.deepStrictEqual(objectMsg.value, { key: "value" });
+  const objectAction = action("object", { key: "value" });
+  assert.strictEqual(objectAction.type, "object");
+  assert.deepStrictEqual(objectAction.value, { key: "value" });
 
-  const arrayMsg = msg("array", [1, 2, 3]);
-  assert.strictEqual(arrayMsg.type, "array");
-  assert.deepStrictEqual(arrayMsg.value, [1, 2, 3]);
+  const arrayAction = action("array", [1, 2, 3]);
+  assert.strictEqual(arrayAction.type, "array");
+  assert.deepStrictEqual(arrayAction.value, [1, 2, 3]);
 });
 
-test("forward - transforms messages", () => {
-  const receivedMessages: string[] = [];
+test("forward - transforms actions", () => {
+  const receivedActions: string[] = [];
 
-  const parentSend = (msg: string) => {
-    receivedMessages.push(msg);
+  const parentSend = (action: string) => {
+    receivedActions.push(action);
   };
 
   const childSend = forward(
     parentSend,
-    (childMsg: number) => `child:${childMsg}`,
+    (childAction: number) => `child:${childAction}`,
   );
 
   childSend(1);
   childSend(2);
   childSend(3);
 
-  assert.deepStrictEqual(receivedMessages, ["child:1", "child:2", "child:3"]);
+  assert.deepStrictEqual(receivedActions, ["child:1", "child:2", "child:3"]);
 });
 
 test("forward - works with complex transformations", () => {
-  type ParentMsg = { type: "parent"; data: string };
-  type ChildMsg = { type: "child"; value: number };
+  type ParentAction = { type: "parent"; data: string };
+  type ChildAction = { type: "child"; value: number };
 
-  const receivedMessages: ParentMsg[] = [];
+  const receivedActions: ParentAction[] = [];
 
-  const parentSend = (msg: ParentMsg) => {
-    receivedMessages.push(msg);
+  const parentSend = (action: ParentAction) => {
+    receivedActions.push(action);
   };
 
-  const childSend = forward(parentSend, (childMsg: ChildMsg) => ({
+  const childSend = forward(parentSend, (childAction: ChildAction) => ({
     type: "parent" as const,
-    data: `transformed-${childMsg.value}`,
+    data: `transformed-${childAction.value}`,
   }));
 
   childSend({ type: "child", value: 42 });
 
-  assert.strictEqual(receivedMessages.length, 1);
-  assert.strictEqual(receivedMessages[0].type, "parent");
-  assert.strictEqual(receivedMessages[0].data, "transformed-42");
+  assert.strictEqual(receivedActions.length, 1);
+  assert.strictEqual(receivedActions[0].type, "parent");
+  assert.strictEqual(receivedActions[0].data, "transformed-42");
 });
 
 test("updateUnknown - logs warning and returns state unchanged", () => {
@@ -207,14 +207,14 @@ test("updateUnknown - logs warning and returns state unchanged", () => {
 
   try {
     const state = { count: 5 };
-    const unknownMsg = { type: "unknown", data: "test" };
+    const unknownAction = { type: "unknown", data: "test" };
 
-    const result = updateUnknown(state, unknownMsg);
+    const result = updateUnknown(state, unknownAction);
 
     assert.strictEqual(result, state);
     assert.strictEqual(
       warningMessage,
-      'Unknown message {"type":"unknown","data":"test"}',
+      'Unknown action {"type":"unknown","data":"test"}',
     );
   } finally {
     // Restore console.warn

@@ -11,17 +11,17 @@ import { computed } from "../signal.js";
  * const parentStore = store(updateParent, { count: 0 });
  * const childStore = pipe(
  *   parentStore,
- *   scope((state) => state.count, (msg) => msg),
+ *   scope((state) => state.count, (action) => action),
  * );
  * ```
  */
-export const scope = <ModelA, MsgA, ModelB, MsgB>(
+export const scope = <ModelA, ActionA, ModelB, ActionB>(
   get: (state: ModelA) => ModelB,
-  tag: (msg: MsgB) => MsgA,
+  tag: (action: ActionB) => ActionA,
 ) =>
 (
-  store: Store<ModelA, MsgA>,
-): Store<ModelB, MsgB> => {
+  store: Store<ModelA, ActionA>,
+): Store<ModelB, ActionB> => {
   const $state = computed(() => get(store.get()));
   const send = forward(store.send, tag);
   return {

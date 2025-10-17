@@ -1,30 +1,30 @@
 import { AnySignal, signal } from "./signal.js";
 
 /**
- * A tagged message. Convenience type for simple messages with a
+ * A tagged action. Convenience type for simple actions with a
  * `type` discriminator and a `value`.
  */
-export type TaggedMsg<Type extends string, Value> = {
+export type TaggedAction<Type extends string, Value> = {
   type: Type;
   value: Value;
 };
 
-/** Convencience factory for creating a message with a `type` discriminator and `value` */
-export const msg = <Type extends string, Value>(
+/** Convencience factory for creating an action with a `type` discriminator and `value` */
+export const action = <Type extends string, Value>(
   type: Type,
   value: Value,
-): TaggedMsg<Type, Value> => ({
+): TaggedAction<Type, Value> => ({
   type,
   value,
 });
 
-export type Reducer<Model, Msg> = (
+export type Reducer<Model, Action> = (
   state: Model,
-  msg: Msg,
+  action: Action,
 ) => Model;
 
-export type Store<Model, Msg> = AnySignal<Model> & {
-  send: (msg: Msg) => void;
+export type Store<Model, Action> = AnySignal<Model> & {
+  send: (action: Action) => void;
 };
 
 /**
@@ -34,10 +34,10 @@ export type Store<Model, Msg> = AnySignal<Model> & {
  * @arg initial - The initial state of the store.
  * @returns A store object with a signal for the state and a send method.
  */
-export const store = <Model, Msg>(
-  update: Reducer<Model, Msg>,
+export const store = <Model, Action>(
+  update: Reducer<Model, Action>,
   initial: Model,
-): Store<Model, Msg> => {
+): Store<Model, Action> => {
   const $state = signal(initial);
 
   /**
@@ -47,11 +47,11 @@ export const store = <Model, Msg>(
   const get = () => $state.get();
 
   /**
-   * Send a message to the reducer.
+   * Send an action to the reducer.
    * This method is hard-bound to the reducer so you can pass it around as a function.
    */
-  const send = (msg: Msg) => {
-    const next = update($state.get(), msg);
+  const send = (action: Action) => {
+    const next = update($state.get(), action);
     $state.set(next);
   };
 
@@ -59,25 +59,25 @@ export const store = <Model, Msg>(
 };
 
 /**
- * Transform a send function so that it tags messages on the way out.
- * This can be useful for mapping messages from one component domain to another.
+ * Transform a send function so that it tags actions on the way out.
+ * This can be useful for mapping actions from one component domain to another.
  */
-export const forward = <MsgA, MsgB>(
-  send: (msg: MsgA) => void,
-  tag: (msg: MsgB) => MsgA,
+export const forward = <ActionA, ActionB>(
+  send: (action: ActionA) => void,
+  tag: (action: ActionB) => ActionA,
 ) =>
-(msg: MsgB): void => {
-  send(tag(msg));
+(action: ActionB): void => {
+  send(tag(action));
 };
 
 /**
- * Convenience function for logging unknown messages in the default arm
+ * Convenience function for logging unknown actions in the default arm
  * of a reducer.
  */
-export const updateUnknown = <Model, Msg>(
+export const updateUnknown = <Model, Action>(
   state: Model,
-  msg: Msg,
+  action: Action,
 ): Model => {
-  console.warn("Unknown message", msg);
+  console.warn("Unknown action", action);
   return state;
 };

@@ -6,7 +6,7 @@ import { pipe } from "../pipe.js";
 import { effect } from "../signal.js";
 
 // Test types for parent store
-type ParentMsg =
+type ParentAction =
   | { type: "increment_counter" }
   | { type: "decrement_counter" }
   | { type: "set_counter"; value: number }
@@ -21,19 +21,19 @@ interface ParentState {
 }
 
 // Test types for child store
-type ChildMsg =
+type ChildAction =
   | { type: "increment" }
   | { type: "set"; value: number };
 
 test("scope - creates scoped store with subset of parent state", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       case "set_counter":
-        return { ...state, counter: msg.value };
+        return { ...state, counter: action.value };
       case "set_name":
-        return { ...state, name: msg.name };
+        return { ...state, name: action.name };
       default:
         return state;
     }
@@ -50,7 +50,7 @@ test("scope - creates scoped store with subset of parent state", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (_msg: ChildMsg) => ({ type: "child_increment" }),
+      (_action: ChildAction) => ({ type: "child_increment" }),
     ),
   );
 
@@ -58,15 +58,15 @@ test("scope - creates scoped store with subset of parent state", () => {
   assert.strictEqual(parentStore.get().counter, 0);
 });
 
-test("scope - maps child messages to parent messages", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+test("scope - maps child actions to parent actions", () => {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       case "child_increment":
         return { ...state, counter: state.counter + 1 };
       case "child_set":
-        return { ...state, counter: msg.value };
+        return { ...state, counter: action.value };
       default:
         return state;
     }
@@ -82,18 +82,18 @@ test("scope - maps child messages to parent messages", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (msg: ChildMsg) => {
-        switch (msg.type) {
+      (action: ChildAction) => {
+        switch (action.type) {
           case "increment":
             return { type: "child_increment" };
           case "set":
-            return { type: "child_set", value: msg.value };
+            return { type: "child_set", value: action.value };
         }
       },
     ),
   );
 
-  // Send message to child store
+  // Send action to child store
   childStore.send({ type: "increment" });
   assert.strictEqual(childStore.get(), 1);
   assert.strictEqual(parentStore.get().counter, 1);
@@ -104,12 +104,12 @@ test("scope - maps child messages to parent messages", () => {
 });
 
 test("scope - reflects parent state changes in scoped store", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       case "set_counter":
-        return { ...state, counter: msg.value };
+        return { ...state, counter: action.value };
       default:
         return state;
     }
@@ -125,7 +125,7 @@ test("scope - reflects parent state changes in scoped store", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (_msg: ChildMsg) => ({ type: "child_increment" }),
+      (_action: ChildAction) => ({ type: "child_increment" }),
     ),
   );
 
@@ -140,12 +140,12 @@ test("scope - reflects parent state changes in scoped store", () => {
 });
 
 test("scope - isolates child from unrelated parent state changes", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "set_name":
-        return { ...state, name: msg.name };
+        return { ...state, name: action.name };
       case "set_counter":
-        return { ...state, counter: msg.value };
+        return { ...state, counter: action.value };
       default:
         return state;
     }
@@ -161,7 +161,7 @@ test("scope - isolates child from unrelated parent state changes", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (_msg: ChildMsg) => ({ type: "child_increment" }),
+      (_action: ChildAction) => ({ type: "child_increment" }),
     ),
   );
 
@@ -190,25 +190,25 @@ test("scope - works with complex state transformations", () => {
     };
   }
 
-  type ComplexParentMsg =
+  type ComplexParentAction =
     | { type: "set_name"; name: string }
     | { type: "set_age"; age: number }
     | { type: "child_set_name"; name: string };
 
-  type ChildProfileMsg = { type: "set_name"; name: string };
+  type ChildProfileAction = { type: "set_name"; name: string };
 
-  const complexReducer: Reducer<ComplexParent, ComplexParentMsg> = (
+  const complexReducer: Reducer<ComplexParent, ComplexParentAction> = (
     state,
     msg,
   ) => {
-    switch (msg.type) {
+    switch (action.type) {
       case "set_name":
       case "child_set_name":
         return {
           ...state,
           user: {
             ...state.user,
-            profile: { ...state.user.profile, name: msg.name },
+            profile: { ...state.user.profile, name: action.name },
           },
         };
       case "set_age":
@@ -216,7 +216,7 @@ test("scope - works with complex state transformations", () => {
           ...state,
           user: {
             ...state.user,
-            profile: { ...state.user.profile, age: msg.age },
+            profile: { ...state.user.profile, age: action.age },
           },
         };
       default:
@@ -237,13 +237,13 @@ test("scope - works with complex state transformations", () => {
     parentStore,
     scope(
       (state) => state.user.profile,
-      (msg: ChildProfileMsg) => ({ type: "child_set_name", name: msg.name }),
+      (action: ChildProfileAction) => ({ type: "child_set_name", name: action.name }),
     ),
   );
 
   assert.deepStrictEqual(profileStore.get(), { name: "Alice", age: 30 });
 
-  // Send message through child
+  // Send action through child
   profileStore.send({ type: "set_name", name: "Bob" });
   assert.strictEqual(profileStore.get().name, "Bob");
   assert.strictEqual(parentStore.get().user.profile.name, "Bob");
@@ -254,18 +254,18 @@ test("scope - works with complex state transformations", () => {
 });
 
 test("scope - works with primitive value scopes", () => {
-  type PrimitiveParentMsg =
+  type PrimitiveParentAction =
     | { type: "set_name"; name: string }
     | { type: "child_set_name"; name: string };
 
-  const parentReducer: Reducer<ParentState, PrimitiveParentMsg> = (
+  const parentReducer: Reducer<ParentState, PrimitiveParentAction> = (
     state,
     msg,
   ) => {
-    switch (msg.type) {
+    switch (action.type) {
       case "set_name":
       case "child_set_name":
-        return { ...state, name: msg.name };
+        return { ...state, name: action.name };
       default:
         return state;
     }
@@ -282,9 +282,9 @@ test("scope - works with primitive value scopes", () => {
     parentStore,
     scope(
       (state) => state.name,
-      (msg: { type: "set"; value: string }) => ({
+      (action: { type: "set"; value: string }) => ({
         type: "child_set_name",
-        name: msg.value,
+        name: action.value,
       }),
     ),
   );
@@ -307,14 +307,14 @@ test("scope - can be chained for nested scoping", () => {
     };
   }
 
-  type NestedMsg =
+  type NestedAction =
     | { type: "set_value"; value: number }
     | { type: "l1_set_value"; value: number }
     | { type: "l2_set_value"; value: number }
     | { type: "l3_set_value"; value: number };
 
-  const nestedReducer: Reducer<NestedState, NestedMsg> = (state, msg) => {
-    switch (msg.type) {
+  const nestedReducer: Reducer<NestedState, NestedAction> = (state, action) => {
+    switch (action.type) {
       case "set_value":
       case "l1_set_value":
       case "l2_set_value":
@@ -325,7 +325,7 @@ test("scope - can be chained for nested scoping", () => {
             ...state.level1,
             level2: {
               ...state.level1.level2,
-              level3: { value: msg.value },
+              level3: { value: action.value },
             },
           },
         };
@@ -343,9 +343,9 @@ test("scope - can be chained for nested scoping", () => {
     rootStore,
     scope(
       (state) => state.level1,
-      (msg: NestedMsg) =>
+      (action: NestedAction) =>
         msg.type === "set_value"
-          ? { type: "l1_set_value", value: msg.value }
+          ? { type: "l1_set_value", value: action.value }
           : msg,
     ),
   );
@@ -355,9 +355,9 @@ test("scope - can be chained for nested scoping", () => {
     level1Store,
     scope(
       (state) => state.level2,
-      (msg: NestedMsg) =>
+      (action: NestedAction) =>
         msg.type === "set_value"
-          ? { type: "l2_set_value", value: msg.value }
+          ? { type: "l2_set_value", value: action.value }
           : msg,
     ),
   );
@@ -367,9 +367,9 @@ test("scope - can be chained for nested scoping", () => {
     level2Store,
     scope(
       (state) => state.level3,
-      (msg: NestedMsg) =>
+      (action: NestedAction) =>
         msg.type === "set_value"
-          ? { type: "l3_set_value", value: msg.value }
+          ? { type: "l3_set_value", value: action.value }
           : msg,
     ),
   );
@@ -382,8 +382,8 @@ test("scope - can be chained for nested scoping", () => {
 });
 
 test("scope - works with effects and reactivity", async () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       case "child_increment":
@@ -403,7 +403,7 @@ test("scope - works with effects and reactivity", async () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (_msg: ChildMsg) => ({ type: "child_increment" }),
+      (_action: ChildAction) => ({ type: "child_increment" }),
     ),
   );
 
@@ -431,16 +431,16 @@ test("scope - works with effects and reactivity", async () => {
 });
 
 test("scope - multiple scoped stores from same parent", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       case "set_name":
-        return { ...state, name: msg.name };
+        return { ...state, name: action.name };
       case "child_increment":
         return { ...state, counter: state.counter + 1 };
       case "child_set":
-        return { ...state, counter: msg.value };
+        return { ...state, counter: action.value };
       default:
         return state;
     }
@@ -457,12 +457,12 @@ test("scope - multiple scoped stores from same parent", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (msg: ChildMsg) => {
-        switch (msg.type) {
+      (action: ChildAction) => {
+        switch (action.type) {
           case "increment":
             return { type: "child_increment" };
           case "set":
-            return { type: "child_set", value: msg.value };
+            return { type: "child_set", value: action.value };
         }
       },
     ),
@@ -473,7 +473,7 @@ test("scope - multiple scoped stores from same parent", () => {
     parentStore,
     scope(
       (state) => state.name,
-      (msg: { type: "set_name"; name: string }) => msg,
+      (action: { type: "set_name"; name: string }) => msg,
     ),
   );
 
@@ -496,20 +496,20 @@ test("scope - handles computed transformations", () => {
     todos: Array<{ id: number; text: string; completed: boolean }>;
   }
 
-  type TodoMsg =
+  type TodoAction =
     | { type: "toggle"; id: number }
     | { type: "child_toggle"; id: number };
 
-  type CompletedMsg = { type: "toggle"; id: number };
+  type CompletedAction = { type: "toggle"; id: number };
 
-  const todoReducer: Reducer<TodoState, TodoMsg> = (state, msg) => {
-    switch (msg.type) {
+  const todoReducer: Reducer<TodoState, TodoAction> = (state, action) => {
+    switch (action.type) {
       case "toggle":
       case "child_toggle":
         return {
           ...state,
           todos: state.todos.map((todo) =>
-            todo.id === msg.id ? { ...todo, completed: !todo.completed } : todo
+            todo.id === action.id ? { ...todo, completed: !todo.completed } : todo
           ),
         };
       default:
@@ -530,7 +530,7 @@ test("scope - handles computed transformations", () => {
     parentStore,
     scope(
       (state) => state.todos.filter((todo) => todo.completed),
-      (msg: CompletedMsg) => ({ type: "child_toggle", id: msg.id }),
+      (action: CompletedAction) => ({ type: "child_toggle", id: action.id }),
     ),
   );
 
@@ -550,10 +550,10 @@ test("scope - handles computed transformations", () => {
 });
 
 test("scope - preserves referential equality for unchanged scopes", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "set_name":
-        return { ...state, name: msg.name };
+        return { ...state, name: action.name };
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       default:
@@ -571,7 +571,7 @@ test("scope - preserves referential equality for unchanged scopes", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (_msg: ChildMsg) => ({ type: "child_increment" }),
+      (_action: ChildAction) => ({ type: "child_increment" }),
     ),
   );
 
