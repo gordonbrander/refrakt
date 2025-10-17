@@ -68,6 +68,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gordonbrander/signal-store.git"
+    "url": "git+https://github.com/gordonbrander/refrakt.git"
   }
 }
