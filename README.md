@@ -16,10 +16,10 @@ At it's core, Refrakt is just a simple signal defined with a reducer. But don't 
 Here's a simple counter example using [Lit](https://lit.dev/) for UI.
 
 ```typescript
-import { store, computed } from "refrakt";
-import { LitElement } from 'lit';
+import { store } from "refrakt";
+import { LitElement, html } from 'lit';
 import { customElement } from 'lit/decorators.js';
-import { html } from '@lit-labs/signals';
+import { SignalWatcher } from '@lit-labs/signals';
 
 type Model = { count: number };
 type Action = { type: 'inc' } | { type: 'dec' };
@@ -35,13 +35,11 @@ const updateCounter = (state: Model, action: Action) => {
 const counter = store(updateCounter, { count: 0 });
 
 @customElement('counter-app')
-class CounterApp extends LitElement {
+class CounterApp extends SignalWatcher(LitElement) {
   render() {
-    const count = computed(() => counter.get().count);
-
     return html`
       <div>
-        <h1>Count: ${count}</h1>
+        <h1>Count: ${counter.get().count}</h1>
         <button @click=${() => counter.send({ type: 'inc' })}>+</button>
         <button @click=${() => counter.send({ type: 'dec' })}>-</button>
       </div>
