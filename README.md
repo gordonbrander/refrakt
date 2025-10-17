@@ -2,7 +2,7 @@
 
 A lightweight, scalable state management library built on top of signals. Pairs well with [Lit](https://lit.dev/) and other frameworks that support [TC39 signals](https://github.com/proposal-signals/signal-polyfill).
 
-Refrakt is just a signal defined with a reducer. But don't underestimate it! Using middleware, you can scale it up all the way into a powerful store with managed side effects and more.
+At its core, Refrakt is just a signal defined with a reducer. But don't underestimate it! Using middleware, you can scale Refrakt all the way up into a powerful store with managed side effects and more.
 
 ## Features
 
@@ -102,13 +102,6 @@ const count = signal(10);
 const doubled = computed(() => count.get() * 2);
 ```
 
-Because the store is a signal, you can use `computed` to scope the store state for fine-grained reactivity.
-
-```ts
-// Only updates when username changes
-const username = computed(() => store.get().account.profile.username);
-```
-
 When you want to react to signal changes, you can use `effect`. Effects are automatically batched and run on the next microtask, preventing unnecessary re-renders and cascading updates.
 
 ```ts
@@ -121,11 +114,19 @@ count.set(20); // Logs: "Count: 20 Doubled: 40"
 cleanup(); // Stop the effect
 ```
 
+Because stores are just another signal, you can use `computed` to scope down state for fine-grained reactivity.
+
+```ts
+// Only updates when username changes
+const username = computed(() => store.get().account.profile.username);
+```
+
+
 ## Fx middleware
 
-The optional `fx` middleware provides a powerful way to handle side effects using async generators.
+While `effect()` is great for running simple side-effects whenever data changes, you sometimes want a more structured approach for managing complex side-effects. The `fx` middleware provides a powerful way to handle managed side effects using async generators.
 
-Effects are modeled as async generators.
+The `fx` middleware takes a single function that returns an async generator.
 
 ```typescript
 type Fx<Model, Action> = (
@@ -134,7 +135,7 @@ type Fx<Model, Action> = (
 ) => AsyncGenerator<Action>; // Yielded actions are sent back to store
 ```
 
-The effect generator function is called for each new action sent to the store, allowing it to perform async work in response and yield back zero or more actions.
+The effect generator function is called for each new action sent to the store, allowing it to perform async work and yield back zero or more actions in response.
 
 ```typescript
 import { store, pipe } from 'refrakt';
