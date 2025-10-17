@@ -2,7 +2,7 @@
 
 A lightweight, scalable state management library built on top of TC39 signals. Pairs well with [Lit](https://lit.dev/) and other frameworks that support [TC39 signals](https://github.com/proposal-signals/signal-polyfill).
 
-At it's core, Refrakt is just a simple signal defined with a reducer. But don't underestimate it! Using middleware, you can scale it up all the way up into a powerful store with managed side effects and more.
+At it's core, Refrakt is just a simple signal defined with a reducer. But don't underestimate it! Using middleware, you can scale it up all the way into a powerful store with managed side effects and more.
 
 ## Features
 
