@@ -1,7 +1,7 @@
 {
-  "name": "signal-store",
-  "version": "0.1.0",
-  "description": "A simple, lightweight, scalable store built on top of signals",
+  "name": "@gordonb/signal-store",
+  "version": "0.0.1",
+  "description": "A lightweight store built on top of TC39 signals",
   "type": "module",
   "exports": {
     ".": {
@@ -65,6 +65,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/gordonbrander/signal-store"
+    "url": "git+https://github.com/gordonbrander/signal-store.git"
   }
 }
