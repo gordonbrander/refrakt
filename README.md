@@ -55,7 +55,7 @@ class CounterApp extends LitElement {
 `store()` creates a signal that can only be updated via its reducer function. It's conceptually similar to React's `useReducer` hook, except it's based on signals.
 
 ```typescript
-import { store } from './store.js';
+import { store } from 'refrakt';
 
 type CounterAction =
   | { type: 'increment' }
@@ -266,7 +266,7 @@ const counterStore = pipe(
 This compositional approach makes it easy to add, remove, or write your own middleware. Just write a function that takes a store and returns a new store with enhanced behavior:
 
 ```typescript
-import type { Store } from './store.js';
+import type { Store } from 'refrakt';
 
 const timingMiddleware = <Model, Action>() =>
   (store: Store<Model, Action>): Store<Model, Action> => {
