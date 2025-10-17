@@ -1,17 +1,19 @@
-# Signal Store
+# Refrakt: state management with signals
 
-A lightweight, scalable store built on top of signals. Pairs well with [Lit](https://lit.dev/) or any other UI framework that supports [TC39 signals](https://github.com/proposal-signals/signal-polyfill).
+A lightweight, scalable state management library built on top of TC39 signals. Pairs well with [Lit](https://lit.dev/) and other frameworks that support [TC39 signals](https://github.com/proposal-signals/signal-polyfill).
+
+At it's core, Refrakt is just a simple signal defined with a reducer. But don't underestimate it! Using middleware, you can scale it up all the way up into a powerful store with managed side effects and more.
 
 ## Features
 
 - **Fine-grained reactivity**: Built on top of TC39 signals.
 - **Effects**: Optional managed side effects via async generators.
-- **Middleware**: Enhance store behavior through function composition.
+- **Middleware**: Enhance store behavior via function composition.
 - **Minimal dependencies**: Uses only `signal-polyfill` library for maximum compatibility.
 
 ## Example
 
-Here's a simple counter app, with UI implemented with [Lit](https://lit.dev/).
+Here's a simple counter example using [Lit](https://lit.dev/) for UI.
 
 ```typescript
 import { store, computed } from "refrakt";
@@ -50,7 +52,7 @@ class CounterApp extends LitElement {
 
 ## Store
 
-`store()` lets you create a signal that can only be updated via its reducer function. This is similar to React's `useReducer` hook, except it's based on signals.
+`store()` creates a signal that can only be updated via its reducer function. It's conceptually similar to React's `useReducer` hook, except it's based on signals.
 
 ```typescript
 import { store } from './store.js';
@@ -82,9 +84,11 @@ counterStore.send({ type: 'increment' });
 console.log(counterStore.get().count); // 1
 ```
 
-The returned store can be used as a signal. You can `.send()` actions to the store to update it. The update function is responsible for taking the current state and the action, and returning the next state. There is no other way to update the store's state. This gives you consistent and predictable state management that is easy to test.
+All actions go through the update function. There is no other way to update the store's state. This gives you consistent and predictable state management that is easy to test. By writing unit tests for the update function, you can ensure that your application's state is always valid.
 
-Store can be used as a centralized store for application state, or you can create multiple stores for different parts of your application. Signals give you a lot of flexibility to mix and match approaches.
+You can create multiple stores for different components, or create a single central store for your entire application state. It's up to you!
+
+Because stores are just signals, you can use computed signals to scope store state, or even combine state from multiple stores. Signals give you a lot of flexibility to mix and match approaches. Refrakt even offers a `scope` middleware to create scoped child stores from parent stores (see below).
 
 ## Signals
 
