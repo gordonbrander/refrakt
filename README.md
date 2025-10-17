@@ -82,7 +82,7 @@ counterStore.send({ type: 'increment' });
 console.log(counterStore.get().count); // 1
 ```
 
-The returned store can be used as a signal, but instead of having a `set` method, it has a `send` method. Messages that are passed to `send` are forwarded to the store's update function, which is responsible for returning the next state. There is no other way to update the store's state. This gives you consistent and predictable state management that is easy to test.
+The returned store can be used as a signal. You can `.send()` messages to the store to update it. The update function is responsible for taking the current state and the message, and returning the next state. There is no other way to update the store's state. This gives you consistent and predictable state management that is easy to test.
 
 Store can be used as a centralized store for application state, or you can create multiple stores for different parts of your application. Signals give you a lot of flexibility to mix and match approaches.
 
