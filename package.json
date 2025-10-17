@@ -1,0 +1,73 @@
+{
+  "name": "@gordonb/signal-store",
+  "version": "0.0.1",
+  "description": "A lightweight store built on top of TC39 signals",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.js"
+    },
+    "./store.js": {
+      "types": "./dist/store.d.ts",
+      "import": "./dist/store.js"
+    },
+    "./signal.js": {
+      "types": "./dist/signal.d.ts",
+      "import": "./dist/signal.js"
+    },
+    "./iter.js": {
+      "types": "./dist/iter.d.ts",
+      "import": "./dist/iter.js"
+    },
+    "./pipe.js": {
+      "types": "./dist/pipe.d.ts",
+      "import": "./dist/pipe.js"
+    },
+    "./middleware/logger.js": {
+      "types": "./dist/middleware/logger.d.ts",
+      "import": "./dist/middleware/logger.js"
+    },
+    "./middleware/fx.js": {
+      "types": "./dist/middleware/fx.d.ts",
+      "import": "./dist/middleware/fx.js"
+    },
+    "./middleware/scope.js": {
+      "types": "./dist/middleware/scope.d.ts",
+      "import": "./dist/middleware/scope.js"
+    }
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "!dist/**/*.test.js",
+    "!dist/**/*.test.d.ts",
+    "README.md",
+    "LICENSE-MIT"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "npm run build && node --test \"dist/**/*.test.js\""
+  },
+  "keywords": [
+    "signals",
+    "state-management",
+    "reactive",
+    "store",
+    "lit"
+  ],
+  "author": "Gordon Brander",
+  "license": "MIT",
+  "dependencies": {
+    "signal-polyfill": "^0.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.8.0",
+    "typescript": "^5.7.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gordonbrander/signal-store.git"
+  }
+}

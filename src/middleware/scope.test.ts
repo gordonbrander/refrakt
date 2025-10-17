@@ -1,11 +1,12 @@
-import { assertEquals } from "@std/assert";
-import { scope } from "./scope.ts";
-import { type Reducer, store } from "../store.ts";
-import { pipe } from "../pipe.ts";
-import { effect } from "../signal.ts";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { scope } from "./scope.js";
+import { type Reducer, store } from "../store.js";
+import { pipe } from "../pipe.js";
+import { effect } from "../signal.js";
 
 // Test types for parent store
-type ParentMsg =
+type ParentAction =
   | { type: "increment_counter" }
   | { type: "decrement_counter" }
   | { type: "set_counter"; value: number }
@@ -20,19 +21,19 @@ interface ParentState {
 }
 
 // Test types for child store
-type ChildMsg =
+type ChildAction =
   | { type: "increment" }
   | { type: "set"; value: number };
 
-Deno.test("scope - creates scoped store with subset of parent state", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+test("scope - creates scoped store with subset of parent state", () => {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       case "set_counter":
-        return { ...state, counter: msg.value };
+        return { ...state, counter: action.value };
       case "set_name":
-        return { ...state, name: msg.name };
+        return { ...state, name: action.name };
       default:
         return state;
     }
@@ -49,23 +50,23 @@ Deno.test("scope - creates scoped store with subset of parent state", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (_msg: ChildMsg) => ({ type: "child_increment" }),
+      (_action: ChildAction) => ({ type: "child_increment" }),
     ),
   );
 
-  assertEquals(childStore.get(), 0);
-  assertEquals(parentStore.get().counter, 0);
+  assert.strictEqual(childStore.get(), 0);
+  assert.strictEqual(parentStore.get().counter, 0);
 });
 
-Deno.test("scope - maps child messages to parent messages", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+test("scope - maps child actions to parent actions", () => {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       case "child_increment":
         return { ...state, counter: state.counter + 1 };
       case "child_set":
-        return { ...state, counter: msg.value };
+        return { ...state, counter: action.value };
       default:
         return state;
     }
@@ -81,34 +82,34 @@ Deno.test("scope - maps child messages to parent messages", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (msg: ChildMsg) => {
-        switch (msg.type) {
+      (action: ChildAction) => {
+        switch (action.type) {
           case "increment":
             return { type: "child_increment" };
           case "set":
-            return { type: "child_set", value: msg.value };
+            return { type: "child_set", value: action.value };
         }
       },
     ),
   );
 
-  // Send message to child store
+  // Send action to child store
   childStore.send({ type: "increment" });
-  assertEquals(childStore.get(), 1);
-  assertEquals(parentStore.get().counter, 1);
+  assert.strictEqual(childStore.get(), 1);
+  assert.strictEqual(parentStore.get().counter, 1);
 
   childStore.send({ type: "set", value: 10 });
-  assertEquals(childStore.get(), 10);
-  assertEquals(parentStore.get().counter, 10);
+  assert.strictEqual(childStore.get(), 10);
+  assert.strictEqual(parentStore.get().counter, 10);
 });
 
-Deno.test("scope - reflects parent state changes in scoped store", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+test("scope - reflects parent state changes in scoped store", () => {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       case "set_counter":
-        return { ...state, counter: msg.value };
+        return { ...state, counter: action.value };
       default:
         return state;
     }
@@ -124,27 +125,27 @@ Deno.test("scope - reflects parent state changes in scoped store", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (_msg: ChildMsg) => ({ type: "child_increment" }),
+      (_action: ChildAction) => ({ type: "child_increment" }),
     ),
   );
 
-  assertEquals(childStore.get(), 5);
+  assert.strictEqual(childStore.get(), 5);
 
   // Update parent store directly
   parentStore.send({ type: "increment_counter" });
-  assertEquals(childStore.get(), 6);
+  assert.strictEqual(childStore.get(), 6);
 
   parentStore.send({ type: "set_counter", value: 100 });
-  assertEquals(childStore.get(), 100);
+  assert.strictEqual(childStore.get(), 100);
 });
 
-Deno.test("scope - isolates child from unrelated parent state changes", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+test("scope - isolates child from unrelated parent state changes", () => {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "set_name":
-        return { ...state, name: msg.name };
+        return { ...state, name: action.name };
       case "set_counter":
-        return { ...state, counter: msg.value };
+        return { ...state, counter: action.value };
       default:
         return state;
     }
@@ -160,21 +161,21 @@ Deno.test("scope - isolates child from unrelated parent state changes", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (_msg: ChildMsg) => ({ type: "child_increment" }),
+      (_action: ChildAction) => ({ type: "child_increment" }),
     ),
   );
 
-  assertEquals(childStore.get(), 0);
+  assert.strictEqual(childStore.get(), 0);
 
   // Change unrelated parent state
   parentStore.send({ type: "set_name", name: "new name" });
 
   // Child store should still return the same counter value
-  assertEquals(childStore.get(), 0);
-  assertEquals(parentStore.get().name, "new name");
+  assert.strictEqual(childStore.get(), 0);
+  assert.strictEqual(parentStore.get().name, "new name");
 });
 
-Deno.test("scope - works with complex state transformations", () => {
+test("scope - works with complex state transformations", () => {
   interface ComplexParent {
     user: {
       id: number;
@@ -189,25 +190,25 @@ Deno.test("scope - works with complex state transformations", () => {
     };
   }
 
-  type ComplexParentMsg =
+  type ComplexParentAction =
     | { type: "set_name"; name: string }
     | { type: "set_age"; age: number }
     | { type: "child_set_name"; name: string };
 
-  type ChildProfileMsg = { type: "set_name"; name: string };
+  type ChildProfileAction = { type: "set_name"; name: string };
 
-  const complexReducer: Reducer<ComplexParent, ComplexParentMsg> = (
+  const complexReducer: Reducer<ComplexParent, ComplexParentAction> = (
     state,
     msg,
   ) => {
-    switch (msg.type) {
+    switch (action.type) {
       case "set_name":
       case "child_set_name":
         return {
           ...state,
           user: {
             ...state.user,
-            profile: { ...state.user.profile, name: msg.name },
+            profile: { ...state.user.profile, name: action.name },
           },
         };
       case "set_age":
@@ -215,7 +216,7 @@ Deno.test("scope - works with complex state transformations", () => {
           ...state,
           user: {
             ...state.user,
-            profile: { ...state.user.profile, age: msg.age },
+            profile: { ...state.user.profile, age: action.age },
           },
         };
       default:
@@ -236,35 +237,35 @@ Deno.test("scope - works with complex state transformations", () => {
     parentStore,
     scope(
       (state) => state.user.profile,
-      (msg: ChildProfileMsg) => ({ type: "child_set_name", name: msg.name }),
+      (action: ChildProfileAction) => ({ type: "child_set_name", name: action.name }),
     ),
   );
 
-  assertEquals(profileStore.get(), { name: "Alice", age: 30 });
+  assert.deepStrictEqual(profileStore.get(), { name: "Alice", age: 30 });
 
-  // Send message through child
+  // Send action through child
   profileStore.send({ type: "set_name", name: "Bob" });
-  assertEquals(profileStore.get().name, "Bob");
-  assertEquals(parentStore.get().user.profile.name, "Bob");
+  assert.strictEqual(profileStore.get().name, "Bob");
+  assert.strictEqual(parentStore.get().user.profile.name, "Bob");
 
   // Update parent
   parentStore.send({ type: "set_age", age: 31 });
-  assertEquals(profileStore.get().age, 31);
+  assert.strictEqual(profileStore.get().age, 31);
 });
 
-Deno.test("scope - works with primitive value scopes", () => {
-  type PrimitiveParentMsg =
+test("scope - works with primitive value scopes", () => {
+  type PrimitiveParentAction =
     | { type: "set_name"; name: string }
     | { type: "child_set_name"; name: string };
 
-  const parentReducer: Reducer<ParentState, PrimitiveParentMsg> = (
+  const parentReducer: Reducer<ParentState, PrimitiveParentAction> = (
     state,
     msg,
   ) => {
-    switch (msg.type) {
+    switch (action.type) {
       case "set_name":
       case "child_set_name":
-        return { ...state, name: msg.name };
+        return { ...state, name: action.name };
       default:
         return state;
     }
@@ -281,21 +282,21 @@ Deno.test("scope - works with primitive value scopes", () => {
     parentStore,
     scope(
       (state) => state.name,
-      (msg: { type: "set"; value: string }) => ({
+      (action: { type: "set"; value: string }) => ({
         type: "child_set_name",
-        name: msg.value,
+        name: action.value,
       }),
     ),
   );
 
-  assertEquals(nameStore.get(), "initial");
+  assert.strictEqual(nameStore.get(), "initial");
 
   nameStore.send({ type: "set", value: "updated" });
-  assertEquals(nameStore.get(), "updated");
-  assertEquals(parentStore.get().name, "updated");
+  assert.strictEqual(nameStore.get(), "updated");
+  assert.strictEqual(parentStore.get().name, "updated");
 });
 
-Deno.test("scope - can be chained for nested scoping", () => {
+test("scope - can be chained for nested scoping", () => {
   interface NestedState {
     level1: {
       level2: {
@@ -306,14 +307,14 @@ Deno.test("scope - can be chained for nested scoping", () => {
     };
   }
 
-  type NestedMsg =
+  type NestedAction =
     | { type: "set_value"; value: number }
     | { type: "l1_set_value"; value: number }
     | { type: "l2_set_value"; value: number }
     | { type: "l3_set_value"; value: number };
 
-  const nestedReducer: Reducer<NestedState, NestedMsg> = (state, msg) => {
-    switch (msg.type) {
+  const nestedReducer: Reducer<NestedState, NestedAction> = (state, action) => {
+    switch (action.type) {
       case "set_value":
       case "l1_set_value":
       case "l2_set_value":
@@ -324,7 +325,7 @@ Deno.test("scope - can be chained for nested scoping", () => {
             ...state.level1,
             level2: {
               ...state.level1.level2,
-              level3: { value: msg.value },
+              level3: { value: action.value },
             },
           },
         };
@@ -342,9 +343,9 @@ Deno.test("scope - can be chained for nested scoping", () => {
     rootStore,
     scope(
       (state) => state.level1,
-      (msg: NestedMsg) =>
+      (action: NestedAction) =>
         msg.type === "set_value"
-          ? { type: "l1_set_value", value: msg.value }
+          ? { type: "l1_set_value", value: action.value }
           : msg,
     ),
   );
@@ -354,9 +355,9 @@ Deno.test("scope - can be chained for nested scoping", () => {
     level1Store,
     scope(
       (state) => state.level2,
-      (msg: NestedMsg) =>
+      (action: NestedAction) =>
         msg.type === "set_value"
-          ? { type: "l2_set_value", value: msg.value }
+          ? { type: "l2_set_value", value: action.value }
           : msg,
     ),
   );
@@ -366,23 +367,23 @@ Deno.test("scope - can be chained for nested scoping", () => {
     level2Store,
     scope(
       (state) => state.level3,
-      (msg: NestedMsg) =>
+      (action: NestedAction) =>
         msg.type === "set_value"
-          ? { type: "l3_set_value", value: msg.value }
+          ? { type: "l3_set_value", value: action.value }
           : msg,
     ),
   );
 
-  assertEquals(level3Store.get(), { value: 0 });
+  assert.deepStrictEqual(level3Store.get(), { value: 0 });
 
   level3Store.send({ type: "set_value", value: 42 });
-  assertEquals(level3Store.get().value, 42);
-  assertEquals(rootStore.get().level1.level2.level3.value, 42);
+  assert.strictEqual(level3Store.get().value, 42);
+  assert.strictEqual(rootStore.get().level1.level2.level3.value, 42);
 });
 
-Deno.test("scope - works with effects and reactivity", async () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+test("scope - works with effects and reactivity", async () => {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       case "child_increment":
@@ -402,7 +403,7 @@ Deno.test("scope - works with effects and reactivity", async () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (_msg: ChildMsg) => ({ type: "child_increment" }),
+      (_action: ChildAction) => ({ type: "child_increment" }),
     ),
   );
 
@@ -414,32 +415,32 @@ Deno.test("scope - works with effects and reactivity", async () => {
 
   // Initial value
   await new Promise((resolve) => setTimeout(resolve, 0));
-  assertEquals(effectValues[0], 0);
+  assert.strictEqual(effectValues[0], 0);
 
   // Update through child
   childStore.send({ type: "increment" });
   await new Promise((resolve) => setTimeout(resolve, 0));
-  assertEquals(effectValues[effectValues.length - 1], 1);
+  assert.strictEqual(effectValues[effectValues.length - 1], 1);
 
   // Update through parent
   parentStore.send({ type: "increment_counter" });
   await new Promise((resolve) => setTimeout(resolve, 0));
-  assertEquals(effectValues[effectValues.length - 1], 2);
+  assert.strictEqual(effectValues[effectValues.length - 1], 2);
 
   cleanup();
 });
 
-Deno.test("scope - multiple scoped stores from same parent", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+test("scope - multiple scoped stores from same parent", () => {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       case "set_name":
-        return { ...state, name: msg.name };
+        return { ...state, name: action.name };
       case "child_increment":
         return { ...state, counter: state.counter + 1 };
       case "child_set":
-        return { ...state, counter: msg.value };
+        return { ...state, counter: action.value };
       default:
         return state;
     }
@@ -456,12 +457,12 @@ Deno.test("scope - multiple scoped stores from same parent", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (msg: ChildMsg) => {
-        switch (msg.type) {
+      (action: ChildAction) => {
+        switch (action.type) {
           case "increment":
             return { type: "child_increment" };
           case "set":
-            return { type: "child_set", value: msg.value };
+            return { type: "child_set", value: action.value };
         }
       },
     ),
@@ -472,43 +473,43 @@ Deno.test("scope - multiple scoped stores from same parent", () => {
     parentStore,
     scope(
       (state) => state.name,
-      (msg: { type: "set_name"; name: string }) => msg,
+      (action: { type: "set_name"; name: string }) => msg,
     ),
   );
 
-  assertEquals(counterStore.get(), 10);
-  assertEquals(nameStore.get(), "parent");
+  assert.strictEqual(counterStore.get(), 10);
+  assert.strictEqual(nameStore.get(), "parent");
 
   // Update counter
   counterStore.send({ type: "increment" });
-  assertEquals(counterStore.get(), 11);
-  assertEquals(nameStore.get(), "parent"); // unchanged
+  assert.strictEqual(counterStore.get(), 11);
+  assert.strictEqual(nameStore.get(), "parent"); // unchanged
 
   // Update name
   nameStore.send({ type: "set_name", name: "updated" });
-  assertEquals(counterStore.get(), 11); // unchanged
-  assertEquals(nameStore.get(), "updated");
+  assert.strictEqual(counterStore.get(), 11); // unchanged
+  assert.strictEqual(nameStore.get(), "updated");
 });
 
-Deno.test("scope - handles computed transformations", () => {
+test("scope - handles computed transformations", () => {
   interface TodoState {
     todos: Array<{ id: number; text: string; completed: boolean }>;
   }
 
-  type TodoMsg =
+  type TodoAction =
     | { type: "toggle"; id: number }
     | { type: "child_toggle"; id: number };
 
-  type CompletedMsg = { type: "toggle"; id: number };
+  type CompletedAction = { type: "toggle"; id: number };
 
-  const todoReducer: Reducer<TodoState, TodoMsg> = (state, msg) => {
-    switch (msg.type) {
+  const todoReducer: Reducer<TodoState, TodoAction> = (state, action) => {
+    switch (action.type) {
       case "toggle":
       case "child_toggle":
         return {
           ...state,
           todos: state.todos.map((todo) =>
-            todo.id === msg.id ? { ...todo, completed: !todo.completed } : todo
+            todo.id === action.id ? { ...todo, completed: !todo.completed } : todo
           ),
         };
       default:
@@ -529,30 +530,30 @@ Deno.test("scope - handles computed transformations", () => {
     parentStore,
     scope(
       (state) => state.todos.filter((todo) => todo.completed),
-      (msg: CompletedMsg) => ({ type: "child_toggle", id: msg.id }),
+      (action: CompletedAction) => ({ type: "child_toggle", id: action.id }),
     ),
   );
 
-  assertEquals(completedStore.get().length, 1);
-  assertEquals(completedStore.get()[0].id, 2);
+  assert.strictEqual(completedStore.get().length, 1);
+  assert.strictEqual(completedStore.get()[0].id, 2);
 
   // Toggle a completed todo
   completedStore.send({ type: "toggle", id: 2 });
 
   // Now no todos are completed
-  assertEquals(completedStore.get().length, 0);
+  assert.strictEqual(completedStore.get().length, 0);
 
   // Toggle another todo through parent
   parentStore.send({ type: "toggle", id: 1 });
-  assertEquals(completedStore.get().length, 1);
-  assertEquals(completedStore.get()[0].id, 1);
+  assert.strictEqual(completedStore.get().length, 1);
+  assert.strictEqual(completedStore.get()[0].id, 1);
 });
 
-Deno.test("scope - preserves referential equality for unchanged scopes", () => {
-  const parentReducer: Reducer<ParentState, ParentMsg> = (state, msg) => {
-    switch (msg.type) {
+test("scope - preserves referential equality for unchanged scopes", () => {
+  const parentReducer: Reducer<ParentState, ParentAction> = (state, action) => {
+    switch (action.type) {
       case "set_name":
-        return { ...state, name: msg.name };
+        return { ...state, name: action.name };
       case "increment_counter":
         return { ...state, counter: state.counter + 1 };
       default:
@@ -570,7 +571,7 @@ Deno.test("scope - preserves referential equality for unchanged scopes", () => {
     parentStore,
     scope(
       (state) => state.counter,
-      (_msg: ChildMsg) => ({ type: "child_increment" }),
+      (_action: ChildAction) => ({ type: "child_increment" }),
     ),
   );
 
@@ -582,5 +583,5 @@ Deno.test("scope - preserves referential equality for unchanged scopes", () => {
   const secondGet = childStore.get();
 
   // The scoped value should be the same (both return 0)
-  assertEquals(firstGet, secondGet);
+  assert.strictEqual(firstGet, secondGet);
 });

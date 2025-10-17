@@ -1,68 +1,69 @@
-import { assertEquals } from "@std/assert";
-import { computed, effect, peek, signal } from "./signal.ts";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { computed, effect, peek, signal } from "./signal.js";
 
-Deno.test("signal - creates and updates state", () => {
+test("signal - creates and updates state", () => {
   const count = signal(0);
 
-  assertEquals(count.get(), 0);
+  assert.strictEqual(count.get(), 0);
 
   count.set(5);
-  assertEquals(count.get(), 5);
+  assert.strictEqual(count.get(), 5);
 
   count.set(-10);
-  assertEquals(count.get(), -10);
+  assert.strictEqual(count.get(), -10);
 });
 
-Deno.test("signal - works with different types", () => {
+test("signal - works with different types", () => {
   const str = signal("hello");
-  assertEquals(str.get(), "hello");
+  assert.strictEqual(str.get(), "hello");
 
   const bool = signal(true);
-  assertEquals(bool.get(), true);
+  assert.strictEqual(bool.get(), true);
 
   const obj = signal({ name: "test" });
-  assertEquals(obj.get(), { name: "test" });
+  assert.deepStrictEqual(obj.get(), { name: "test" });
 
   const arr = signal([1, 2, 3]);
-  assertEquals(arr.get(), [1, 2, 3]);
+  assert.deepStrictEqual(arr.get(), [1, 2, 3]);
 });
 
-Deno.test("computed - derives from single signal", () => {
+test("computed - derives from single signal", () => {
   const count = signal(5);
   const doubled = computed(() => count.get() * 2);
 
-  assertEquals(doubled.get(), 10);
+  assert.strictEqual(doubled.get(), 10);
 
   count.set(10);
-  assertEquals(doubled.get(), 20);
+  assert.strictEqual(doubled.get(), 20);
 });
 
-Deno.test("computed - derives from multiple signals", () => {
+test("computed - derives from multiple signals", () => {
   const a = signal(3);
   const b = signal(4);
   const sum = computed(() => a.get() + b.get());
 
-  assertEquals(sum.get(), 7);
+  assert.strictEqual(sum.get(), 7);
 
   a.set(10);
-  assertEquals(sum.get(), 14);
+  assert.strictEqual(sum.get(), 14);
 
   b.set(20);
-  assertEquals(sum.get(), 30);
+  assert.strictEqual(sum.get(), 30);
 });
 
-Deno.test("computed - chains computations", () => {
+test("computed - chains computations", () => {
   const base = signal(2);
   const doubled = computed(() => base.get() * 2);
   const quadrupled = computed(() => doubled.get() * 2);
 
-  assertEquals(quadrupled.get(), 8);
+  assert.strictEqual(quadrupled.get(), 8);
 
   base.set(5);
-  assertEquals(quadrupled.get(), 20);
+  assert.strictEqual(quadrupled.get(), 20);
 });
 
-Deno.test("effect - runs on signal changes", async () => {
+test("effect - runs on signal changes", async () => {
   const count = signal(0);
   let effectRuns = 0;
   let lastValue = -1;
@@ -73,8 +74,8 @@ Deno.test("effect - runs on signal changes", async () => {
   });
 
   // Initial run
-  assertEquals(effectRuns, 1);
-  assertEquals(lastValue, 0);
+  assert.strictEqual(effectRuns, 1);
+  assert.strictEqual(lastValue, 0);
 
   // Change signal
   count.set(5);
@@ -82,20 +83,20 @@ Deno.test("effect - runs on signal changes", async () => {
   // Wait for microtask
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
 
-  assertEquals(effectRuns, 2);
-  assertEquals(lastValue, 5);
+  assert.strictEqual(effectRuns, 2);
+  assert.strictEqual(lastValue, 5);
 
   // Change again
   count.set(10);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
 
-  assertEquals(effectRuns, 3);
-  assertEquals(lastValue, 10);
+  assert.strictEqual(effectRuns, 3);
+  assert.strictEqual(lastValue, 10);
 
   cleanup();
 });
 
-Deno.test("effect - batches multiple signal changes", async () => {
+test("effect - batches multiple signal changes", async () => {
   const a = signal(1);
   const b = signal(2);
   let effectRuns = 0;
@@ -107,8 +108,8 @@ Deno.test("effect - batches multiple signal changes", async () => {
   });
 
   // Initial run
-  assertEquals(effectRuns, 1);
-  assertEquals(lastSum, 3);
+  assert.strictEqual(effectRuns, 1);
+  assert.strictEqual(lastSum, 3);
 
   // Change both signals synchronously
   a.set(10);
@@ -117,13 +118,13 @@ Deno.test("effect - batches multiple signal changes", async () => {
   // Effect should only run once after microtask
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
 
-  assertEquals(effectRuns, 2);
-  assertEquals(lastSum, 30);
+  assert.strictEqual(effectRuns, 2);
+  assert.strictEqual(lastSum, 30);
 
   cleanup();
 });
 
-Deno.test("effect - cleanup function works", async () => {
+test("effect - cleanup function works", async () => {
   const count = signal(0);
   let cleanupCalls = 0;
 
@@ -134,23 +135,23 @@ Deno.test("effect - cleanup function works", async () => {
     };
   });
 
-  assertEquals(cleanupCalls, 0);
+  assert.strictEqual(cleanupCalls, 0);
 
   // Trigger effect again
   count.set(1);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
 
   // Previous cleanup should have been called
-  assertEquals(cleanupCalls, 1);
+  assert.strictEqual(cleanupCalls, 1);
 
   // Cleanup the effect itself
   cleanup();
 
   // Final cleanup should be called
-  assertEquals(cleanupCalls, 2);
+  assert.strictEqual(cleanupCalls, 2);
 });
 
-Deno.test("effect - cleanup stops tracking", async () => {
+test("effect - cleanup stops tracking", async () => {
   const count = signal(0);
   let effectRuns = 0;
 
@@ -159,21 +160,21 @@ Deno.test("effect - cleanup stops tracking", async () => {
     count.get();
   });
 
-  assertEquals(effectRuns, 1);
+  assert.strictEqual(effectRuns, 1);
 
   count.set(1);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
-  assertEquals(effectRuns, 2);
+  assert.strictEqual(effectRuns, 2);
 
   // Cleanup and verify no more runs
   cleanup();
 
   count.set(2);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
-  assertEquals(effectRuns, 2); // Should not increase
+  assert.strictEqual(effectRuns, 2); // Should not increase
 });
 
-Deno.test("peek - reads without tracking", async () => {
+test("peek - reads without tracking", async () => {
   const count = signal(0);
   let effectRuns = 0;
   let peekedValue = -1;
@@ -186,20 +187,20 @@ Deno.test("peek - reads without tracking", async () => {
     peekedValue = peek(() => count.get());
   });
 
-  assertEquals(effectRuns, 1);
-  assertEquals(peekedValue, 0);
+  assert.strictEqual(effectRuns, 1);
+  assert.strictEqual(peekedValue, 0);
 
   count.set(5);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
 
   // Effect should run because of tracked read
-  assertEquals(effectRuns, 2);
-  assertEquals(peekedValue, 5);
+  assert.strictEqual(effectRuns, 2);
+  assert.strictEqual(peekedValue, 5);
 
   cleanup();
 });
 
-Deno.test("peek - prevents tracking in complex scenarios", async () => {
+test("peek - prevents tracking in complex scenarios", async () => {
   const trigger = signal(0);
   const data = signal("initial");
   let effectRuns = 0;
@@ -213,24 +214,24 @@ Deno.test("peek - prevents tracking in complex scenarios", async () => {
     results.push(peekedData);
   });
 
-  assertEquals(effectRuns, 1);
-  assertEquals(results, ["initial"]);
+  assert.strictEqual(effectRuns, 1);
+  assert.deepStrictEqual(results, ["initial"]);
 
   // Changing data should not trigger effect
   data.set("changed");
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
-  assertEquals(effectRuns, 1); // Should not change
+  assert.strictEqual(effectRuns, 1); // Should not change
 
   // Changing trigger should trigger effect and peek at current data
   trigger.set(1);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
-  assertEquals(effectRuns, 2);
-  assertEquals(results, ["initial", "changed"]);
+  assert.strictEqual(effectRuns, 2);
+  assert.deepStrictEqual(results, ["initial", "changed"]);
 
   cleanup();
 });
 
-Deno.test("complex dependency graph", async () => {
+test("complex dependency graph", async () => {
   const base1 = signal(2);
   const base2 = signal(3);
 
@@ -247,27 +248,27 @@ Deno.test("complex dependency graph", async () => {
   });
 
   // Initial: sum=5, product=6, combined=11
-  assertEquals(effectRuns, 1);
-  assertEquals(lastResult, 11);
+  assert.strictEqual(effectRuns, 1);
+  assert.strictEqual(lastResult, 11);
 
   // Change base1: sum=6, product=9, combined=15
   base1.set(3);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
 
-  assertEquals(effectRuns, 2);
-  assertEquals(lastResult, 15);
+  assert.strictEqual(effectRuns, 2);
+  assert.strictEqual(lastResult, 15);
 
   // Change base2: sum=7, product=12, combined=19
   base2.set(4);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
 
-  assertEquals(effectRuns, 3);
-  assertEquals(lastResult, 19);
+  assert.strictEqual(effectRuns, 3);
+  assert.strictEqual(lastResult, 19);
 
   cleanup();
 });
 
-Deno.test("effect - handles errors gracefully", async () => {
+test("effect - handles errors gracefully", async () => {
   const count = signal(0);
   let effectRuns = 0;
   let errorThrown = false;
@@ -283,25 +284,25 @@ Deno.test("effect - handles errors gracefully", async () => {
     }
   });
 
-  assertEquals(effectRuns, 1);
+  assert.strictEqual(effectRuns, 1);
 
   // This should not throw, but the effect might log errors
   count.set(5);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
 
-  assertEquals(effectRuns, 2);
-  assertEquals(errorThrown, true);
+  assert.strictEqual(effectRuns, 2);
+  assert.strictEqual(errorThrown, true);
 
   // Effect should still work after error
   count.set(10);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
 
-  assertEquals(effectRuns, 3);
+  assert.strictEqual(effectRuns, 3);
 
   cleanup();
 });
 
-Deno.test("multiple effects on same signal", async () => {
+test("multiple effects on same signal", async () => {
   const count = signal(0);
   let effect1Runs = 0;
   let effect2Runs = 0;
@@ -316,35 +317,35 @@ Deno.test("multiple effects on same signal", async () => {
     count.get();
   });
 
-  assertEquals(effect1Runs, 1);
-  assertEquals(effect2Runs, 1);
+  assert.strictEqual(effect1Runs, 1);
+  assert.strictEqual(effect2Runs, 1);
 
   count.set(1);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
 
-  assertEquals(effect1Runs, 2);
-  assertEquals(effect2Runs, 2);
+  assert.strictEqual(effect1Runs, 2);
+  assert.strictEqual(effect2Runs, 2);
 
   cleanup1();
   cleanup2();
 });
 
-Deno.test("signal with undefined and null values", () => {
+test("signal with undefined and null values", () => {
   const undefinedSignal = signal<string | undefined>(undefined);
-  assertEquals(undefinedSignal.get(), undefined);
+  assert.strictEqual(undefinedSignal.get(), undefined);
 
   undefinedSignal.set("defined");
-  assertEquals(undefinedSignal.get(), "defined");
+  assert.strictEqual(undefinedSignal.get(), "defined");
 
   undefinedSignal.set(undefined);
-  assertEquals(undefinedSignal.get(), undefined);
+  assert.strictEqual(undefinedSignal.get(), undefined);
 
   const nullSignal = signal<string | null>(null);
-  assertEquals(nullSignal.get(), null);
+  assert.strictEqual(nullSignal.get(), null);
 
   nullSignal.set("not null");
-  assertEquals(nullSignal.get(), "not null");
+  assert.strictEqual(nullSignal.get(), "not null");
 
   nullSignal.set(null);
-  assertEquals(nullSignal.get(), null);
+  assert.strictEqual(nullSignal.get(), null);
 });
