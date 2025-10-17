@@ -14,7 +14,7 @@ A lightweight, scalable store built on top of signals. Pairs well with [Lit](htt
 Here's a simple counter app, with UI implemented with [Lit](https://lit.dev/).
 
 ```typescript
-import { store, computed } from "@gordonb/signal-store";
+import { store, computed } from "refrakt";
 import { LitElement } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { html } from '@lit-labs/signals';
@@ -91,7 +91,7 @@ Store can be used as a centralized store for application state, or you can creat
 The signals module re-exports the TC39 signals polyfill, as well as providing a handful of convenience functions.
 
 ```typescript
-import { signal, computed, effect } from '@gordonb/signal-store/signal.js';
+import { signal, computed, effect } from 'refrakt/signal.js';
 
 // Create a `State` signal
 const count = signal(10);
@@ -137,8 +137,8 @@ type Fx<Model, Action> = (
 The effect generator function is called for each new action sent to the store, allowing it to perform async work in response and yield back zero or more actions.
 
 ```typescript
-import { store, pipe } from '@gordonb/signal-store';
-import { fx, type Fx } from '@gordonb/signal-store/middleware/fx.js';
+import { store, pipe } from 'refrakt';
+import { fx, type Fx } from 'refrakt/middleware/fx.js';
 
 const fetchProfileFx: Fx<AppState, AppAction> = async function* (state, action) {
   if (action.type === "fetch-profile") {
@@ -194,14 +194,13 @@ Because effects are just async generators, they can be easily composed and mappe
 - `sequenceAsync(...iterables)` - Sequence async iterables, yielding all values from the first before moving to the next
 - `mapAsync(iterable, transform)` - Transform each value in an async iterable using a sync or async function
 
-### Logger middleware
+### Logger
 
 Logs all actions and state changes to the console:
 
 ```typescript
-import { store } from '@gordonb/signal-store';
-import { pipe } from '@gordonb/signal-store/pipe.js';
-import { logger } from '@gordonb/signal-store/middleware/logger.js';
+import { store, pipe } from 'refrakt';
+import { logger } from 'refrakt/middleware/logger.js';
 
 const myStore = pipe(
   store(update, initialState),
@@ -215,14 +214,13 @@ MyStore: < { type: 'increment' }
 MyStore: > { count: 1 }
 ```
 
-### Scope middleware
+### Scope
 
 Scope lets you create a scoped child store from a parent store. It returns a new store that is indistinguishable from a top-level store. However, this child store's state is derived from the parent state, and all messages are routed through the parent store.
 
 ```typescript
-import { store } from '@gordonb/signal-store';
-import { pipe } from '@gordonb/signal-store/pipe.js';
-import { scope } from '@gordonb/signal-store/middleware/scope.js';
+import { store, pipe } from 'refrakt';
+import { scope } from 'refrakt/middleware/scope.js';
 
 const childStore = pipe(
   parentStore,
@@ -252,10 +250,9 @@ const myStore = loggerMiddleware(store(update, initial));
 Simple! However, if you're applying more than one middleware, these nested function calls can get a little tedious. `pipe()` makes this a bit more ergonomic. It applies multiple middleware functions to the store from left-to-right, returning the final decorated store:
 
 ```typescript
-import { store } from '@gordonb/signal-store';
-import { pipe } from '@gordonb/signal-store/pipe.js';
-import { fx } from '@gordonb/signal-store/middleware/fx.js';
-import { logger } from '@gordonb/signal-store/middleware/logger.js';
+import { store, pipe } from 'refrakt';
+import { fx } from 'refrakt/middleware/fx.js';
+import { logger } from 'refrakt/middleware/logger.js';
 
 const counterStore = pipe(
   store(update, { count: 0 }),

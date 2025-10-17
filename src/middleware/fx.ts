@@ -31,7 +31,7 @@ const forkFx = async <Action>(
  *
  * @usage
  * ```ts
- * import { store, pipe, middleware } from "signal-store";
+ * import { store, pipe, middleware } from "refrakt";
  *
  * async function* effects(state: () => Model, action: Action) {
  *    if (action.type === "some-action") {
