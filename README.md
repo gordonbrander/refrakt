@@ -9,7 +9,7 @@ A lightweight, scalable store built on top of signals. Pairs well with [Lit](htt
 - **Middleware**: Enhance store behavior through function composition.
 - **Minimal dependencies**: Uses only `signal-polyfill` library for maximum compatibility.
 
-### Example
+## Example
 
 Here's a simple counter app, with UI implemented with [Lit](https://lit.dev/).
 
@@ -86,7 +86,7 @@ The returned store can be used as a signal. You can `.send()` actions to the sto
 
 Store can be used as a centralized store for application state, or you can create multiple stores for different parts of your application. Signals give you a lot of flexibility to mix and match approaches.
 
-### Signals
+## Signals
 
 The signals module re-exports the TC39 signals polyfill, as well as providing a handful of convenience functions.
 
@@ -119,7 +119,9 @@ count.set(20); // Logs: "Count: 20 Doubled: 40"
 cleanup(); // Stop the effect
 ```
 
-## Managed effects
+## Middleware
+
+### Fx: managed effects middleware
 
 The optional `fx` middleware provides a powerful way to handle side effects using async generators.
 
@@ -192,7 +194,7 @@ Because effects are just async generators, they can be easily composed and mappe
 - `sequenceAsync(...iterables)` - Sequence async iterables, yielding all values from the first before moving to the next
 - `mapAsync(iterable, transform)` - Transform each value in an async iterable using a sync or async function
 
-## Logger middleware
+### Logger middleware
 
 Logs all actions and state changes to the console:
 
@@ -213,7 +215,7 @@ MyStore: < { type: 'increment' }
 MyStore: > { count: 1 }
 ```
 
-## Scope middleware
+### Scope middleware
 
 Scope lets you create a scoped child store from a parent store. It returns a new store that is indistinguishable from a top-level store. However, this child store's state is derived from the parent state, and all messages are routed through the parent store.
 
@@ -236,7 +238,7 @@ const childStore = pipe(
 );
 ```
 
-## How middleware works
+### Custom Middleware
 
 Middleware are just functions of `(store: Store<Model, Msg>) => Store<Model, Msg>` that wrap the store, returning a new store with enhanced behavior.
 
@@ -262,11 +264,7 @@ const counterStore = pipe(
 );
 ```
 
-This compositional approach makes it easy to add, remove, or write your own middleware.
-
-### Custom Middleware
-
-Creating your own middleware functions is easy. Just write a function that takes a store and returns a new store with enhanced behavior:
+This compositional approach makes it easy to add, remove, or write your own middleware. Just write a function that takes a store and returns a new store with enhanced behavior:
 
 ```typescript
 import type { Store } from './store.js';
