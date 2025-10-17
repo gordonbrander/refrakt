@@ -237,6 +237,60 @@ const childStore = pipe(
 );
 ```
 
+One way you can use scope is to create components that can be used in _either_ an island architecture style, or in a more Elmish subcomponent style.
+
+Components can be initialized with their own store by default. This store can be optionally overridden with a scoped store that customizes child component behavior.
+
+```typescript
+// child-component.ts
+import { store, type Store } from "refrakt";
+import { LitElement, html } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import { watch } from '@lit-labs/signals';
+
+// ...
+
+@customElement('child-component')
+class ChildComponent extends LitElement {
+  @property({ attribute: false })
+  store: Store<ChildModel, ChildAction> = store(update, { count: 0 });
+
+  // ...
+}
+```
+
+```typescript
+// parent-component.ts
+import { pipe } from "refrakt";
+import { scope } from "refrakt/middleware/scope.js";
+import { LitElement, html } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+import * as ChildComponent from "./child-component.js";
+
+// ...
+
+const childStore = pipe(
+  parentStore,
+  scope(
+  (state: ParentModel) => state.child,
+    (msg: ChildMsg) => ({ type: "child", msg })
+  ),
+);
+
+@customElement('parent-component')
+class ParentComponent extends LitElement {
+  render() {
+    return html`
+      <div class="parent">
+          <child-component .store=${childStore}></child-component>
+      </div>
+    `;
+  }
+}
+```
+
+Because scoped stores are indistinguishable from parent stores, you can replace the default child store, and the child component will be none the wiser. This allows for a form of dependency injection where parent components can intercept and react to child actions, as well as customize child component behavior.
+
 ## Custom Middleware
 
 Middleware are just functions of `(store: Store<Model, Msg>) => Store<Model, Msg>` that wrap the store, returning a new store with enhanced behavior.
