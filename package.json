@@ -1,6 +1,6 @@
 {
   "name": "refrakt",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A lightweight, scalable state management library built on top of TC39 signals",
   "type": "module",
   "exports": {
