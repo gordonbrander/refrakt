@@ -189,7 +189,7 @@ const clockFx: Fx<AppState, AppAction> = async function* (state, action) {
 };
 ```
 
-Additionally, `fx` can take an additional `context` parameter. This can be used to pass additional information to the effect generator, such as services for performing I/O operations.
+`fx` can also take an additional `context` parameter. This can be used to pass additional information to the effect generator, such as services for performing I/O operations.
 
 ```ts
 import services from './services.js';
