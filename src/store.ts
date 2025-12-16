@@ -1,4 +1,4 @@
-import { AnySignal, signal } from "./signal.js";
+import { type AnySignal, signal } from "./signal.js";
 
 /**
  * A tagged action. Convenience type for simple actions with a
@@ -23,8 +23,10 @@ export type Reducer<Model, Action> = (
   action: Action,
 ) => Model;
 
+export type Send<Action> = (action: Action) => void;
+
 export type Store<Model, Action> = AnySignal<Model> & {
-  send: (action: Action) => void;
+  send: Send<Action>;
 };
 
 /**
