@@ -1,9 +1,10 @@
 import { type Store } from "../store.js";
 import { peek } from "../signal.js";
 
-export type Fx<Model, Action> = (
+export type Fx<Model, Action, Context = void> = (
   state: () => Model,
   action: Action,
+  context: Context,
 ) => AsyncGenerator<Action>;
 
 const forkFx = async <Action>(
@@ -29,6 +30,10 @@ const forkFx = async <Action>(
  * Cancellable tasks can be modeled by recording relevant state on the model and
  * checking the current state within the generator.
  *
+ * `fx` can also take an optional second `context` parameter. This can be used to
+ * pass additional information to the effect generator, such as services for
+ * performing I/O operations.
+ *
  * @usage
  * ```ts
  * import { store, pipe, middleware } from "refrakt";
@@ -45,24 +50,33 @@ const forkFx = async <Action>(
  * );
  * ```
  */
-export const fx = <Model, Action>(
-  fx: Fx<Model, Action>,
-) =>
-(
-  { get, send }: Store<Model, Action>,
-): Store<Model, Action> => {
-  const peekState = () => peek(get);
+export function fx<Model, Action>(
+  fx: Fx<Model, Action, void>,
+): (store: Store<Model, Action>) => Store<Model, Action>;
+export function fx<Model, Action, Context>(
+  fx: Fx<Model, Action, Context>,
+  context: Context,
+): (store: Store<Model, Action>) => Store<Model, Action>;
+export function fx<Model, Action, Context = void>(
+  fx: Fx<Model, Action, Context>,
+  context?: Context,
+): (store: Store<Model, Action>) => Store<Model, Action> {
+  return (
+    { get, send }: Store<Model, Action>,
+  ): Store<Model, Action> => {
+    const peekState = () => peek(get);
 
-  const sendWithFx = (action: Action) => {
-    // First, apply the action to update the state
-    send(action);
-    // Then generate and fork the effect
-    const effect = fx(peekState, action);
-    forkFx(effect, sendWithFx);
-  };
+    const sendWithFx = (action: Action) => {
+      // First, apply the action to update the state
+      send(action);
+      // Then generate and fork the effect
+      const effect = fx(peekState, action, context!);
+      forkFx(effect, sendWithFx);
+    };
 
-  return {
-    get,
-    send: sendWithFx,
+    return {
+      get,
+      send: sendWithFx,
+    };
   };
-};
+}

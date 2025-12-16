@@ -40,7 +40,7 @@ test("fx - handles simple async effects", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterAction> = async function* (get, action) {
+  const testFx: Fx<CounterState, CounterAction> = async function*(get, action) {
     if (action.type === "async_increment") {
       await delay(10);
       yield { type: "increment" };
@@ -79,7 +79,7 @@ test("fx - handles multiple yielded actions", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterAction> = async function* (_get, action) {
+  const testFx: Fx<CounterState, CounterAction> = async function*(_get, action) {
     if (action.type === "multi_step") {
       yield { type: "increment" };
       await delay(5);
@@ -124,7 +124,7 @@ test("fx - ignores actions that don't trigger effects", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterAction> = async function* (_get, action) {
+  const testFx: Fx<CounterState, CounterAction> = async function*(_get, action) {
     if (action.type === "increment") {
       await delay(5);
       yield { type: "increment" };
@@ -162,7 +162,7 @@ test("fx - can access current state", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterAction> = async function* (get, action) {
+  const testFx: Fx<CounterState, CounterAction> = async function*(get, action) {
     if (action.type === "async_double") {
       const currentCount = get().count;
       await delay(5);
@@ -203,7 +203,7 @@ test("fx - handles errors gracefully", async () => {
       }
     };
 
-    const testFx: Fx<CounterState, CounterAction> = async function* (
+    const testFx: Fx<CounterState, CounterAction> = async function*(
       _get,
       action,
     ) {
@@ -241,7 +241,7 @@ test("fx - works with empty generator", async () => {
     return state;
   };
 
-  const testFx: Fx<CounterState, CounterAction> = async function* (
+  const testFx: Fx<CounterState, CounterAction> = async function*(
     _get,
     _action,
   ) {
@@ -277,7 +277,7 @@ test("fx - preserves action order", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterAction> = async function* (_get, action) {
+  const testFx: Fx<CounterState, CounterAction> = async function*(_get, action) {
     if (action.type === "async_increment") {
       processedActions.push(`fx:${action.type}`);
       await delay(5);
@@ -315,7 +315,7 @@ test("fx - can chain multiple async operations", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterAction> = async function* (get, action) {
+  const testFx: Fx<CounterState, CounterAction> = async function*(get, action) {
     if (action.type === "async_increment") {
       // First async operation
       await delay(5);
@@ -358,7 +358,7 @@ test("fx - runs concurrently for multiple actions", async () => {
     }
   };
 
-  const testFx: Fx<CounterState, CounterAction> = async function* (_get, action) {
+  const testFx: Fx<CounterState, CounterAction> = async function*(_get, action) {
     if (action.type === "async_increment") {
       await delay(10);
       yield { type: "increment" };

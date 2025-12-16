@@ -189,6 +189,28 @@ const clockFx: Fx<AppState, AppAction> = async function* (state, action) {
 };
 ```
 
+Additionally, `fx` can take an additional `context` parameter. This can be used to pass additional information to the effect generator, such as services for performing I/O operations.
+
+```ts
+import services from './services.js';
+
+const loginFx: Fx<AppState, AppAction, AppContext> = async function* (state, action, context) {
+  if (action.type === "login") {
+    const success = await auth.login();
+    if (success) {
+      yield { type: 'login-success' };
+    } else {
+      yield { type: 'login-failure' };
+    }
+  }
+};
+
+const appStore = pipe(
+  store(appReducer, initialState),
+  fx(loginFx, services)
+);
+````
+
 Because effects are just async generators, they can be easily composed and mapped. The `iter` submodule provides a handful of useful utility functions for merging and mapping async generators:
 
 - `mergeAsync(...iterables)` - Merge multiple async iterables, yielding values in interleaved order as they become available
