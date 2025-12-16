@@ -199,7 +199,7 @@ test("scope - works with complex state transformations", () => {
 
   const complexReducer: Reducer<ComplexParent, ComplexParentAction> = (
     state,
-    msg,
+    action,
   ) => {
     switch (action.type) {
       case "set_name":
@@ -260,7 +260,7 @@ test("scope - works with primitive value scopes", () => {
 
   const parentReducer: Reducer<ParentState, PrimitiveParentAction> = (
     state,
-    msg,
+    action,
   ) => {
     switch (action.type) {
       case "set_name":
@@ -344,9 +344,9 @@ test("scope - can be chained for nested scoping", () => {
     scope(
       (state) => state.level1,
       (action: NestedAction) =>
-        msg.type === "set_value"
+        action.type === "set_value"
           ? { type: "l1_set_value", value: action.value }
-          : msg,
+          : action,
     ),
   );
 
@@ -356,9 +356,9 @@ test("scope - can be chained for nested scoping", () => {
     scope(
       (state) => state.level2,
       (action: NestedAction) =>
-        msg.type === "set_value"
+        action.type === "set_value"
           ? { type: "l2_set_value", value: action.value }
-          : msg,
+          : action,
     ),
   );
 
@@ -368,9 +368,9 @@ test("scope - can be chained for nested scoping", () => {
     scope(
       (state) => state.level3,
       (action: NestedAction) =>
-        msg.type === "set_value"
+        action.type === "set_value"
           ? { type: "l3_set_value", value: action.value }
-          : msg,
+          : action,
     ),
   );
 
@@ -473,7 +473,7 @@ test("scope - multiple scoped stores from same parent", () => {
     parentStore,
     scope(
       (state) => state.name,
-      (action: { type: "set_name"; name: string }) => msg,
+      (action: { type: "set_name"; name: string }) => action,
     ),
   );
 
