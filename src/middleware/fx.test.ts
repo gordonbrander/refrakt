@@ -384,3 +384,35 @@ test("fx - runs concurrently for multiple actions", async () => {
   const timeDiff = Math.max(...timestamps) - Math.min(...timestamps);
   assert.strictEqual(timeDiff < 5, true);
 });
+
+test("fx - passes context to fx generator function", (_t, done) => {
+  type State = number;
+
+  type Action = { type: "increment" };
+
+  type Context = number;
+
+  const testFx: Fx<State, Action, Context> = async function*(_get, _action, context) {
+    if (context === 10) {
+      return done();
+    } else {
+      return done(new Error("Context not set"));
+    }
+  };
+
+  const counterReducer: Reducer<State, Action> = (state, action) => {
+    switch (action.type) {
+      case "increment":
+        return state + 1;
+      default:
+        return state;
+    }
+  };
+
+  const testStore = pipe(
+    store(counterReducer, 0),
+    fx(testFx, 10),
+  );
+
+  testStore.send({ type: "increment" });
+});
