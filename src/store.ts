@@ -68,17 +68,20 @@ export const forward = <ActionA, ActionB>(
   send: (action: ActionA) => void,
   tag: (action: ActionB) => ActionA,
 ) =>
-(action: ActionB): void => {
-  send(tag(action));
-};
+  (action: ActionB): void => {
+    send(tag(action));
+  };
 
 /**
  * Convenience function for logging unknown actions in the default arm
  * of a reducer.
+ *
+ * Because `action` is of type `never`, Typescript will show an error under
+ * this argument if the switch is not exhaustive.
  */
-export const updateUnknown = <Model, Action>(
+export const updateUnknown = <Model>(
   state: Model,
-  action: Action,
+  action: never,
 ): Model => {
   console.warn("Unknown action", action);
   return state;

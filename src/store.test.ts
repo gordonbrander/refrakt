@@ -209,6 +209,7 @@ test("updateUnknown - logs warning and returns state unchanged", () => {
     const state = { count: 5 };
     const unknownAction = { type: "unknown", data: "test" };
 
+    // @ts-ignore - we want to test updateUnknown
     const result = updateUnknown(state, unknownAction);
 
     assert.strictEqual(result, state);
