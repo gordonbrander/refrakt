@@ -1,4 +1,4 @@
-import { type Store } from "../store.js";
+import { type ReducerSignal } from "../reducer.js";
 import { peek } from "../signal.js";
 
 export type Fx<Model, Action, Context = void> = (
@@ -52,18 +52,18 @@ const forkFx = async <Action>(
  */
 export function fx<Model, Action>(
   fx: Fx<Model, Action, void>,
-): (store: Store<Model, Action>) => Store<Model, Action>;
+): (store: ReducerSignal<Model, Action>) => ReducerSignal<Model, Action>;
 export function fx<Model, Action, Context>(
   fx: Fx<Model, Action, Context>,
   context: Context,
-): (store: Store<Model, Action>) => Store<Model, Action>;
+): (store: ReducerSignal<Model, Action>) => ReducerSignal<Model, Action>;
 export function fx<Model, Action, Context = void>(
   fx: Fx<Model, Action, Context>,
   context?: Context,
-): (store: Store<Model, Action>) => Store<Model, Action> {
+): (store: ReducerSignal<Model, Action>) => ReducerSignal<Model, Action> {
   return (
-    { get, send }: Store<Model, Action>,
-  ): Store<Model, Action> => {
+    { get, send }: ReducerSignal<Model, Action>,
+  ): ReducerSignal<Model, Action> => {
     const peekState = () => peek(get);
 
     const sendWithFx = (action: Action) => {

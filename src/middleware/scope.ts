@@ -1,4 +1,4 @@
-import { forward, type Store } from "../store.js";
+import { forward, type ReducerSignal } from "../reducer.js";
 import { computed } from "../signal.js";
 
 /**
@@ -19,13 +19,13 @@ export const scope = <ModelA, ActionA, ModelB, ActionB>(
   get: (state: ModelA) => ModelB,
   tag: (action: ActionB) => ActionA,
 ) =>
-(
-  store: Store<ModelA, ActionA>,
-): Store<ModelB, ActionB> => {
-  const $state = computed(() => get(store.get()));
-  const send = forward(store.send, tag);
-  return {
-    get: () => $state.get(),
-    send,
+  (
+    store: ReducerSignal<ModelA, ActionA>,
+  ): ReducerSignal<ModelB, ActionB> => {
+    const $state = computed(() => get(store.get()));
+    const send = forward(store.send, tag);
+    return {
+      get: () => $state.get(),
+      send,
+    };
   };
-};

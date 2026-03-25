@@ -1,4 +1,4 @@
-import { type Store } from "../store.js";
+import { type ReducerSignal } from "../reducer.js";
 import { peek } from "../signal.js";
 
 /**
@@ -18,17 +18,17 @@ export const logger = <Model, Action>({
   log?: boolean;
   prefix?: string;
 } = {}) =>
-(
-  { get, send }: Store<Model, Action>,
-): Store<Model, Action> => {
-  const sendWithLogging = (action: Action) => {
-    if (log) console.log(`${prefix}<`, action);
-    send(action);
-    if (log) console.log(`${prefix}>`, peek(get));
-  };
+  (
+    { get, send }: ReducerSignal<Model, Action>,
+  ): ReducerSignal<Model, Action> => {
+    const sendWithLogging = (action: Action) => {
+      if (log) console.log(`${prefix}<`, action);
+      send(action);
+      if (log) console.log(`${prefix}>`, peek(get));
+    };
 
-  return {
-    get,
-    send: sendWithLogging,
+    return {
+      get,
+      send: sendWithLogging,
+    };
   };
-};
