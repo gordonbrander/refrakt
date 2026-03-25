@@ -81,9 +81,9 @@ console.log(counterStore.get()); // 1
 
 ## Store
 
-`store()` creates a reduer-like signal with support for managed side-effects. Instead of the reducer returning the next state, store reducers return a transaction object (`Tx`) containing the next state *and* optional side-effects.
+`store()` returns a signal looks exactly like the type returned by `reducer()`, but has additional support for managed side-effects. Instead of the reducer returning just the next state, a store reducer returns a transaction object containing the next state *and* optional side-effects.
 
-Effects are modeled as async generators that yield zero or more actions over time.
+Effects are modeled as async generator functions that yield zero or more actions over time.
 
 ```typescript
 import { store, tx, type Tx } from 'refrakt/store.js';
@@ -120,7 +120,19 @@ const counterStore = store(update, { count: 0, fetching: false });
 counterStore.send({ type: 'increment' });
 ```
 
-`tx(state, effects?)` is a convenience factory for creating transactions. Effects are async generators that yield actions back to the store.
+`tx(state, effect?)` is a convenience factory for creating transactions. Effects are async generators that yield actions back to the store.
+
+Effect generator functions can also take an optional `state()` argument, which can be used to check in on the current state of the store as the generator progresses.
+
+```typescript
+async function* (state: () => Model) {
+  await sleep(2000);
+  if (state().cancel) {
+    return;
+  }
+  yield { type: "msg", value: "hello world" }
+}
+```
 
 ### Transactional effects
 
