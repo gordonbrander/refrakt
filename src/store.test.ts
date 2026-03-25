@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { store, tx, type Update, forward, action, unknown } from "./store.js";
+import { store, tx, type Update, unknown, withLogging } from "./store.js";
 
 // Helper function to create a promise that resolves after a delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -206,33 +206,69 @@ test("store - context is passed to update function", () => {
   assert.strictEqual(myStore.get(), 0);
 });
 
-test("action - creates tagged action", () => {
-  const testAction = action("test", 42);
-
-  assert.strictEqual(testAction.type, "test");
-  assert.strictEqual(testAction.value, 42);
-});
-
-test("forward - transforms actions", () => {
-  const receivedActions: string[] = [];
-
-  const parentSend = (action: string) => {
-    receivedActions.push(action);
+test("withLogging - logs actions and state transitions", () => {
+  const logs: string[] = [];
+  const originalDebug = console.debug;
+  console.debug = (...args: unknown[]) => {
+    logs.push(args.map(String).join(" "));
   };
 
-  const childSend = forward(
-    parentSend,
-    (childAction: number) => `child:${childAction}`,
-  );
+  try {
+    const update: Update<number, CounterAction, void> = (state, action) => {
+      switch (action.type) {
+        case "increment":
+          return tx(state + 1);
+        case "decrement":
+          return tx(state - 1);
+        default:
+          return tx(state);
+      }
+    };
 
-  childSend(1);
-  childSend(2);
-  childSend(3);
+    const logged = withLogging(update, { name: "counter" });
+    const counterStore = store(logged, 0);
 
-  assert.deepStrictEqual(receivedActions, ["child:1", "child:2", "child:3"]);
+    counterStore.send({ type: "increment" });
+
+    assert.strictEqual(logs.length, 2);
+    assert.ok(logs[0].includes("<-"));
+    assert.ok(logs[0].includes("counter"));
+    assert.ok(logs[1].includes("->"));
+    assert.ok(logs[1].includes("counter"));
+  } finally {
+    console.debug = originalDebug;
+  }
 });
 
-test("updateUnknown - logs warning and returns state unchanged", () => {
+test("withLogging - respects log predicate", () => {
+  const logs: string[] = [];
+  const originalDebug = console.debug;
+  console.debug = (...args: unknown[]) => {
+    logs.push(args.map(String).join(" "));
+  };
+
+  try {
+    const update: Update<number, CounterAction, void> = (state, action) => {
+      switch (action.type) {
+        case "increment":
+          return tx(state + 1);
+        default:
+          return tx(state);
+      }
+    };
+
+    const logged = withLogging(update, { log: () => false });
+    const counterStore = store(logged, 0);
+
+    counterStore.send({ type: "increment" });
+    assert.strictEqual(counterStore.get(), 1);
+    assert.strictEqual(logs.length, 0);
+  } finally {
+    console.debug = originalDebug;
+  }
+});
+
+test("unknown - logs warning and returns state unchanged", () => {
   const originalWarn = console.warn;
   let warningMessage = "";
 
@@ -247,7 +283,7 @@ test("updateUnknown - logs warning and returns state unchanged", () => {
     // @ts-ignore - we want to test updateUnknown
     const result = unknown(state, unknownAction);
 
-    assert.strictEqual(result, state);
+    assert.strictEqual(result.state, state);
     assert.strictEqual(
       warningMessage,
       'Unknown action {"type":"unknown","data":"test"}',

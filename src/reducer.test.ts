@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import {
   reducer,
   type Reducer,
-  forward,
   unknown,
+  withLogging,
 } from "./reducer.js";
 
 // Test types for actions
@@ -139,48 +139,69 @@ test("reducer - works with complex state", () => {
   assert.strictEqual(todoStore.get().todos[0].text, "Walk dog");
 });
 
-test("forward - transforms actions", () => {
-  const receivedActions: string[] = [];
-
-  const parentSend = (action: string) => {
-    receivedActions.push(action);
+test("withLogging - logs actions and state transitions", () => {
+  const logs: string[] = [];
+  const originalDebug = console.debug;
+  console.debug = (...args: unknown[]) => {
+    logs.push(args.map(String).join(" "));
   };
 
-  const childSend = forward(
-    parentSend,
-    (childAction: number) => `child:${childAction}`,
-  );
+  try {
+    const counterReducer: Reducer<number, CounterAction> = (state, action) => {
+      switch (action.type) {
+        case "increment":
+          return state + 1;
+        case "decrement":
+          return state - 1;
+        default:
+          return state;
+      }
+    };
 
-  childSend(1);
-  childSend(2);
-  childSend(3);
+    const logged = withLogging(counterReducer, { name: "counter" });
+    const counterStore = reducer(logged, 0);
 
-  assert.deepStrictEqual(receivedActions, ["child:1", "child:2", "child:3"]);
+    counterStore.send({ type: "increment" });
+
+    assert.strictEqual(logs.length, 2);
+    assert.ok(logs[0].includes("<-"));
+    assert.ok(logs[0].includes("counter"));
+    assert.ok(logs[1].includes("->"));
+    assert.ok(logs[1].includes("counter"));
+  } finally {
+    console.debug = originalDebug;
+  }
 });
 
-test("forward - works with complex transformations", () => {
-  type ParentAction = { type: "parent"; data: string };
-  type ChildAction = { type: "child"; value: number };
-
-  const receivedActions: ParentAction[] = [];
-
-  const parentSend = (action: ParentAction) => {
-    receivedActions.push(action);
+test("withLogging - respects log predicate", () => {
+  const logs: string[] = [];
+  const originalDebug = console.debug;
+  console.debug = (...args: unknown[]) => {
+    logs.push(args.map(String).join(" "));
   };
 
-  const childSend = forward(parentSend, (childAction: ChildAction) => ({
-    type: "parent" as const,
-    data: `transformed-${childAction.value}`,
-  }));
+  try {
+    const counterReducer: Reducer<number, CounterAction> = (state, action) => {
+      switch (action.type) {
+        case "increment":
+          return state + 1;
+        default:
+          return state;
+      }
+    };
 
-  childSend({ type: "child", value: 42 });
+    const logged = withLogging(counterReducer, { log: () => false });
+    const counterStore = reducer(logged, 0);
 
-  assert.strictEqual(receivedActions.length, 1);
-  assert.strictEqual(receivedActions[0].type, "parent");
-  assert.strictEqual(receivedActions[0].data, "transformed-42");
+    counterStore.send({ type: "increment" });
+    assert.strictEqual(counterStore.get(), 1);
+    assert.strictEqual(logs.length, 0);
+  } finally {
+    console.debug = originalDebug;
+  }
 });
 
-test("updateUnknown - logs warning and returns state unchanged", () => {
+test("unknown - logs warning and returns state unchanged", () => {
   const originalWarn = console.warn;
   let warningMessage = "";
 
