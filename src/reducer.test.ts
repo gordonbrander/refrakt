@@ -3,9 +3,8 @@ import assert from "node:assert/strict";
 import {
   reducer,
   type Reducer,
-  action,
   forward,
-  stepUnknown,
+  unknown,
 } from "./reducer.js";
 
 // Test types for actions
@@ -43,7 +42,7 @@ test("reducer - creates reducer with initial state", () => {
       case "add":
         return state + action.value;
       default:
-        return stepUnknown(state, action);
+        return unknown(state, action);
     }
   };
 
@@ -64,7 +63,7 @@ test("reducer - handles actions through send", () => {
       case "add":
         return state + action.value;
       default:
-        return stepUnknown(state, action);
+        return unknown(state, action);
     }
   };
 
@@ -114,7 +113,7 @@ test("reducer - works with complex state", () => {
           todos: state.todos.filter((todo) => todo.id !== action.id),
         };
       default:
-        return stepUnknown(state, action);
+        return unknown(state, action);
     }
   };
 
@@ -138,27 +137,6 @@ test("reducer - works with complex state", () => {
   todoStore.send({ type: "remove", id: 1 });
   assert.strictEqual(todoStore.get().todos.length, 1);
   assert.strictEqual(todoStore.get().todos[0].text, "Walk dog");
-});
-
-test("action - creates tagged action", () => {
-  const testAction = action("test", 42);
-
-  assert.strictEqual(testAction.type, "test");
-  assert.strictEqual(testAction.value, 42);
-});
-
-test("action - works with different value types", () => {
-  const stringAction = action("string", "hello");
-  assert.strictEqual(stringAction.type, "string");
-  assert.strictEqual(stringAction.value, "hello");
-
-  const objectAction = action("object", { key: "value" });
-  assert.strictEqual(objectAction.type, "object");
-  assert.deepStrictEqual(objectAction.value, { key: "value" });
-
-  const arrayAction = action("array", [1, 2, 3]);
-  assert.strictEqual(arrayAction.type, "array");
-  assert.deepStrictEqual(arrayAction.value, [1, 2, 3]);
 });
 
 test("forward - transforms actions", () => {
@@ -216,7 +194,7 @@ test("updateUnknown - logs warning and returns state unchanged", () => {
     const unknownAction = { type: "unknown", data: "test" };
 
     // @ts-ignore - we want to test updateUnknown
-    const result = stepUnknown(state, unknownAction);
+    const result = unknown(state, unknownAction);
 
     assert.strictEqual(result, state);
     assert.strictEqual(

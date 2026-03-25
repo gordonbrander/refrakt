@@ -1,33 +1,10 @@
-import { type AnySignal, signal } from "./signal.js";
-
-/**
- * A tagged action. Convenience type for simple actions with a
- * `type` discriminator and a `value`.
- */
-export type TaggedAction<Type extends string, Value> = {
-  type: Type;
-  value: Value;
-};
-
-/** Convencience factory for creating an action with a `type` discriminator and `value` */
-export const action = <Type extends string, Value>(
-  type: Type,
-  value: Value,
-): TaggedAction<Type, Value> => ({
-  type,
-  value,
-});
+import { signal } from "./signal.js";
+import { type SendableSignal } from "./send.js";
 
 export type Reducer<Model, Action> = (
   state: Model,
   action: Action,
 ) => Model;
-
-export type Send<Action> = (action: Action) => void;
-
-export type ReducerSignal<Model, Action> = AnySignal<Model> & {
-  send: Send<Action>;
-};
 
 /**
  * Create a signals-based reducer that updates through the provided `step`
@@ -39,7 +16,7 @@ export type ReducerSignal<Model, Action> = AnySignal<Model> & {
 export const reducer = <Model, Action>(
   step: Reducer<Model, Action>,
   initial: Model,
-): ReducerSignal<Model, Action> => {
+): SendableSignal<Model, Action> => {
   const $state = signal(initial);
 
   /**
@@ -60,18 +37,37 @@ export const reducer = <Model, Action>(
   return { get, send };
 };
 
+const alwaysLog = () => true;
 
 /**
- * Transform a send function so that it tags actions on the way out.
- * This can be useful for mapping actions from one component domain to another.
+ * Wrap update function with logging.
+ * @param update - The reduer function to wrap.
+ * @param options - options object
+ * @param options.name - Name of the reducer in log messages. Defaults to "reducer".
+ * @param options.log - A function that returns `true` if logging should be enabled.
+ * @returns A new update function that logs state transitions.
  */
-export const forward = <ActionA, ActionB>(
-  send: (action: ActionA) => void,
-  tag: (action: ActionB) => ActionA,
-) =>
-  (action: ActionB): void => {
-    send(tag(action));
+export const withLogging = <Model, Action>(
+  update: Reducer<Model, Action>,
+  {
+    name = "reducer",
+    log = alwaysLog,
+  }: {
+    name?: string;
+    log?: () => boolean
+  } = {}
+): Reducer<Model, Action> => {
+  return (state: Model, action: Action) => {
+    if (log()) {
+      console.debug("<-", name, action);
+    }
+    const next = update(state, action);
+    if (log()) {
+      console.debug("->", name, next);
+    }
+    return next;
   };
+}
 
 /**
  * Convenience function for logging unknown actions in the default arm
@@ -80,7 +76,7 @@ export const forward = <ActionA, ActionB>(
  * Because `action` is of type `never`, Typescript will show an error under
  * this argument if the switch is not exhaustive.
  */
-export const stepUnknown = <Model>(
+export const unknown = <Model>(
   state: Model,
   action: never,
 ): Model => {

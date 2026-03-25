@@ -1,4 +1,5 @@
-export * from "./store.js";
-export * from "./signal.js";
-export { reducer, type Reducer, type ReducerSignal } from "./reducer.js";
-export { pipe } from "./pipe.js";
+export * as Signal from "./signal.js";
+export * as Reducer from "./reducer.js";
+export * as Store from "./store.js";
+export * as Effect from "./effect.js";
+export * as Send from "./send.js";

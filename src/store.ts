@@ -1,26 +1,20 @@
 import { signal } from "./signal.js";
-import { type ReducerSignal } from "./reducer.js";
-export { type Send, type TaggedAction, action, forward } from "./reducer.js";
-
-export type Effects<Model, Action> = AsyncGenerator<Action, void, Model>;
-
-export async function* noEffects<Model, Action>(): Effects<Model, Action> {
-  // Yield nothing
-}
+import { type SendableSignal } from "./send.js";
+import * as Effect from "./effect.js";
 
 /**
  * A transaction is a value that represents a state update and optional effects.
  */
 export type Tx<Model, Action> = {
   state: Model;
-  effects: Effects<Model, Action>;
+  effect: Effect.Effect<Model, Action>;
 };
 
 /** Create a transaction */
 export const tx = <Model, Action>(
   state: Model,
-  effects: Effects<Model, Action> = noEffects<Model, Action>(),
-): Tx<Model, Action> => ({ state, effects });
+  effect: Effect.Effect<Model, Action> = Effect.none<Model, Action>(),
+): Tx<Model, Action> => ({ state, effect });
 
 export type Update<Model, Action, Context> = (
   state: Model,
@@ -28,7 +22,7 @@ export type Update<Model, Action, Context> = (
   context: Context,
 ) => Tx<Model, Action>;
 
-export type Store<Model, Action> = ReducerSignal<Model, Action>;
+export type Store<Model, Action> = SendableSignal<Model, Action>;
 
 /**
  * Create a signals-based store that updates through the provided `update`
@@ -55,10 +49,10 @@ export function store<Model, Action, Context>(
 ): Store<Model, Action> {
   const $state = signal(initial);
 
-  const forkEffects = async (effects: Effects<Model, Action>) => {
+  const forkEffect = async (effect: Effect.Effect<Model, Action>) => {
     while (true) {
       try {
-        const { value, done } = await effects.next(get());
+        const { value, done } = await effect.next(get());
 
         if (done) {
           return
@@ -68,7 +62,7 @@ export function store<Model, Action, Context>(
           send(value);
         }
       } catch (e) {
-        console.warn("Error in effect", e);
+        console.error("Error in effect", e);
         return;
       }
     }
@@ -85,12 +79,44 @@ export function store<Model, Action, Context>(
    * This method is hard-bound to the reducer so you can pass it around as a function.
    */
   const send = (action: Action) => {
-    const { state, effects } = update($state.get(), action, context!);
+    const { state, effect } = update($state.get(), action, context!);
     $state.set(state);
-    forkEffects(effects);
+    forkEffect(effect);
   };
 
   return { get, send };
+};
+
+const alwaysLog = () => true;
+
+/**
+ * Wrap update function with logging.
+ * @param update - The update function to wrap.
+ * @param options - options object
+ * @param options.name - Name of the store in log messages. Defaults to "store".
+ * @param options.log - A function that returns `true` if logging should be enabled.
+ * @returns A new update function that logs state transitions.
+ */
+export const withLogging = <Model, Action, Context>(
+  update: Update<Model, Action, Context>,
+  {
+    name = "store",
+    log = alwaysLog,
+  }: {
+    name?: string;
+    log?: () => boolean
+  } = {}
+): Update<Model, Action, Context> => {
+  return (state: Model, action: Action, context: Context) => {
+    if (log()) {
+      console.debug("<-", name, action);
+    }
+    const result = update(state, action, context);
+    if (log()) {
+      console.debug("->", name, result.state);
+    }
+    return result;
+  };
 };
 
 /**
@@ -100,7 +126,7 @@ export function store<Model, Action, Context>(
  * Because `action` is of type `never`, Typescript will show an error under
  * this argument if the switch is not exhaustive.
  */
-export const updateUnknown = <Model, Action>(
+export const unknown = <Model, Action>(
   state: Model,
   action: never,
 ): Tx<Model, Action> => {

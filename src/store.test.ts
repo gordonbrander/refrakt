@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { store, tx, type Update, forward, action, updateUnknown } from "./store.js";
+import { store, tx, type Update, forward, action, unknown } from "./store.js";
 
 // Helper function to create a promise that resolves after a delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -24,7 +24,7 @@ test("store - creates store with initial state", () => {
       case "add":
         return tx(state + action.value);
       default:
-        return updateUnknown(state, action);
+        return unknown(state, action);
     }
   };
 
@@ -45,7 +45,7 @@ test("store - handles actions through send", () => {
       case "add":
         return tx(state + action.value);
       default:
-        return updateUnknown(state, action);
+        return unknown(state, action);
     }
   };
 
@@ -85,7 +85,7 @@ test("store - transactional effects yield actions", async () => {
       case "set":
         return tx(action.value);
       default:
-        return updateUnknown(state, action);
+        return unknown(state, action);
     }
   };
 
@@ -119,7 +119,7 @@ test("store - effects can yield multiple actions", async () => {
       case "increment":
         return tx(state + 1);
       default:
-        return updateUnknown(state, action);
+        return unknown(state, action);
     }
   };
 
@@ -159,7 +159,7 @@ test("store - transactional check-then-update-then-effect", async () => {
       case "set":
         return tx({ ...state, count: action.value, fetching: false });
       default:
-        return updateUnknown(state, action);
+        return unknown(state, action);
     }
   };
 
@@ -245,7 +245,7 @@ test("updateUnknown - logs warning and returns state unchanged", () => {
     const unknownAction = { type: "unknown", data: "test" };
 
     // @ts-ignore - we want to test updateUnknown
-    const result = updateUnknown(state, unknownAction);
+    const result = unknown(state, unknownAction);
 
     assert.strictEqual(result, state);
     assert.strictEqual(
