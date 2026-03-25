@@ -20,6 +20,10 @@
       "types": "./dist/iter.d.ts",
       "import": "./dist/iter.js"
     },
+    "./reducer.js": {
+      "types": "./dist/reducer.d.ts",
+      "import": "./dist/reducer.js"
+    },
     "./pipe.js": {
       "types": "./dist/pipe.d.ts",
       "import": "./dist/pipe.js"

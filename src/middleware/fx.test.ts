@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { type Fx, fx } from "./fx.js";
-import { type Reducer, store } from "../store.js";
+import { type Reducer, reducer } from "../reducer.js";
 import { pipe } from "../pipe.js";
 
 // Test types
@@ -49,7 +49,7 @@ test("fx - handles simple async effects", async () => {
   };
 
   const counterStore = pipe(
-    store(counterReducer, { count: 0, loading: false } as CounterState),
+    reducer(counterReducer, { count: 0, loading: false } as CounterState),
     fx(testFx),
   );
 
@@ -91,7 +91,7 @@ test("fx - handles multiple yielded actions", async () => {
   };
 
   const counterStore = pipe(
-    store(counterReducer, { count: 0, loading: false }),
+    reducer(counterReducer, { count: 0, loading: false }),
     fx(testFx),
   );
 
@@ -133,7 +133,7 @@ test("fx - ignores actions that don't trigger effects", async () => {
   };
 
   const counterStore = pipe(
-    store(counterReducer, { count: 0, loading: false }),
+    reducer(counterReducer, { count: 0, loading: false }),
     fx(testFx),
   );
 
@@ -171,7 +171,7 @@ test("fx - can access current state", async () => {
   };
 
   const counterStore = pipe(
-    store(counterReducer, { count: 5, loading: false }),
+    reducer(counterReducer, { count: 5, loading: false }),
     fx(testFx),
   );
 
@@ -214,7 +214,7 @@ test("fx - handles errors gracefully", async () => {
     };
 
     const counterStore = pipe(
-      store(counterReducer, { count: 0, loading: false }),
+      reducer(counterReducer, { count: 0, loading: false }),
       fx(testFx),
     );
 
@@ -250,7 +250,7 @@ test("fx - works with empty generator", async () => {
   };
 
   const counterStore = pipe(
-    store(counterReducer, { count: 0, loading: false }),
+    reducer(counterReducer, { count: 0, loading: false }),
     fx(testFx),
   );
 
@@ -286,7 +286,7 @@ test("fx - preserves action order", async () => {
   };
 
   const counterStore = pipe(
-    store(counterReducer, { count: 0, loading: false }),
+    reducer(counterReducer, { count: 0, loading: false }),
     fx(testFx),
   );
 
@@ -332,7 +332,7 @@ test("fx - can chain multiple async operations", async () => {
   };
 
   const counterStore = pipe(
-    store(counterReducer, { count: 0, loading: false }),
+    reducer(counterReducer, { count: 0, loading: false }),
     fx(testFx),
   );
 
@@ -366,7 +366,7 @@ test("fx - runs concurrently for multiple actions", async () => {
   };
 
   const counterStore = pipe(
-    store(counterReducer, { count: 0, loading: false }),
+    reducer(counterReducer, { count: 0, loading: false }),
     fx(testFx),
   );
 
@@ -410,7 +410,7 @@ test("fx - passes context to fx generator function", (_t, done) => {
   };
 
   const testStore = pipe(
-    store(counterReducer, 0),
+    reducer(counterReducer, 0),
     fx(testFx, 10),
   );
 

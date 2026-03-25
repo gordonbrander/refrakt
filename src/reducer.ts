@@ -80,7 +80,7 @@ export const forward = <ActionA, ActionB>(
  * Because `action` is of type `never`, Typescript will show an error under
  * this argument if the switch is not exhaustive.
  */
-export const updateUnknown = <Model>(
+export const stepUnknown = <Model>(
   state: Model,
   action: never,
 ): Model => {

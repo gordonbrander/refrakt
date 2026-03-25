@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { scope } from "./scope.js";
-import { type Reducer, store } from "../store.js";
+import { type Reducer, reducer } from "../reducer.js";
 import { pipe } from "../pipe.js";
 import { effect } from "../signal.js";
 
@@ -39,7 +39,7 @@ test("scope - creates scoped store with subset of parent state", () => {
     }
   };
 
-  const parentStore = store(parentReducer, {
+  const parentStore = reducer(parentReducer, {
     counter: 0,
     name: "test",
     timestamp: 0,
@@ -72,7 +72,7 @@ test("scope - maps child actions to parent actions", () => {
     }
   };
 
-  const parentStore = store(parentReducer, {
+  const parentStore = reducer(parentReducer, {
     counter: 0,
     name: "test",
     timestamp: 0,
@@ -115,7 +115,7 @@ test("scope - reflects parent state changes in scoped store", () => {
     }
   };
 
-  const parentStore = store(parentReducer, {
+  const parentStore = reducer(parentReducer, {
     counter: 5,
     name: "test",
     timestamp: 0,
@@ -151,7 +151,7 @@ test("scope - isolates child from unrelated parent state changes", () => {
     }
   };
 
-  const parentStore = store(parentReducer, {
+  const parentStore = reducer(parentReducer, {
     counter: 0,
     name: "test",
     timestamp: 0,
@@ -224,7 +224,7 @@ test("scope - works with complex state transformations", () => {
     }
   };
 
-  const parentStore = store(complexReducer, {
+  const parentStore = reducer(complexReducer, {
     user: {
       id: 1,
       profile: { name: "Alice", age: 30 },
@@ -271,7 +271,7 @@ test("scope - works with primitive value scopes", () => {
     }
   };
 
-  const parentStore = store(parentReducer, {
+  const parentStore = reducer(parentReducer, {
     counter: 0,
     name: "initial",
     timestamp: 0,
@@ -334,7 +334,7 @@ test("scope - can be chained for nested scoping", () => {
     }
   };
 
-  const rootStore = store(nestedReducer, {
+  const rootStore = reducer(nestedReducer, {
     level1: { level2: { level3: { value: 0 } } },
   });
 
@@ -393,7 +393,7 @@ test("scope - works with effects and reactivity", async () => {
     }
   };
 
-  const parentStore = store(parentReducer, {
+  const parentStore = reducer(parentReducer, {
     counter: 0,
     name: "test",
     timestamp: 0,
@@ -446,7 +446,7 @@ test("scope - multiple scoped stores from same parent", () => {
     }
   };
 
-  const parentStore = store(parentReducer, {
+  const parentStore = reducer(parentReducer, {
     counter: 10,
     name: "parent",
     timestamp: 0,
@@ -517,7 +517,7 @@ test("scope - handles computed transformations", () => {
     }
   };
 
-  const parentStore = store(todoReducer, {
+  const parentStore = reducer(todoReducer, {
     todos: [
       { id: 1, text: "Task 1", completed: false },
       { id: 2, text: "Task 2", completed: true },
@@ -561,7 +561,7 @@ test("scope - preserves referential equality for unchanged scopes", () => {
     }
   };
 
-  const parentStore = store(parentReducer, {
+  const parentStore = reducer(parentReducer, {
     counter: 0,
     name: "test",
     timestamp: 0,

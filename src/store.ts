@@ -1,19 +1,25 @@
 import { signal } from "./signal.js";
 import { type ReducerSignal } from "./reducer.js";
-export { type Send, forward, updateUnknown } from "./reducer.js";
+export { type Send, type TaggedAction, action, forward } from "./reducer.js";
+
+export type Effects<Model, Action> = AsyncGenerator<Action, void, Model>;
+
+export async function* noEffects<Model, Action>(): Effects<Model, Action> {
+  // Yield nothing
+}
 
 /**
  * A transaction is a value that represents a state update and optional effects.
  */
 export type Tx<Model, Action> = {
   state: Model;
-  effects?: AsyncGenerator<Action>;
+  effects: Effects<Model, Action>;
 };
 
 /** Create a transaction */
 export const tx = <Model, Action>(
   state: Model,
-  effects?: AsyncGenerator<Action>,
+  effects: Effects<Model, Action> = noEffects<Model, Action>(),
 ): Tx<Model, Action> => ({ state, effects });
 
 export type Update<Model, Action, Context> = (
@@ -49,12 +55,21 @@ export function store<Model, Action, Context>(
 ): Store<Model, Action> {
   const $state = signal(initial);
 
-  const forkEffects = async (effects: AsyncGenerator<Action>) => {
+  const forkEffects = async (effects: Effects<Model, Action>) => {
     while (true) {
-      const { value, done } = await effects.next(get());
-      if (done) return;
-      if (value != undefined) {
-        send(value);
+      try {
+        const { value, done } = await effects.next(get());
+
+        if (done) {
+          return
+        };
+
+        if (value != undefined) {
+          send(value);
+        }
+      } catch (e) {
+        console.warn("Error in effect", e);
+        return;
       }
     }
   };
@@ -72,10 +87,23 @@ export function store<Model, Action, Context>(
   const send = (action: Action) => {
     const { state, effects } = update($state.get(), action, context!);
     $state.set(state);
-    if (effects) {
-      forkEffects(effects);
-    }
+    forkEffects(effects);
   };
 
   return { get, send };
+};
+
+/**
+ * Convenience function for logging unknown actions in the default arm
+ * of a reducer.
+ *
+ * Because `action` is of type `never`, Typescript will show an error under
+ * this argument if the switch is not exhaustive.
+ */
+export const updateUnknown = <Model, Action>(
+  state: Model,
+  action: never,
+): Tx<Model, Action> => {
+  console.warn("Unknown action", action);
+  return tx(state);
 };
