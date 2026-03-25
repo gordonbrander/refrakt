@@ -77,10 +77,10 @@ test("store - transactional effects yield actions", async () => {
       case "fetch":
         return tx<number, Action>(
           state,
-          (async function*() {
+          async function*() {
             await delay(10);
             yield { type: "set", value: 42 };
-          })(),
+          },
         );
       case "set":
         return tx(action.value);
@@ -109,12 +109,12 @@ test("store - effects can yield multiple actions", async () => {
       case "start":
         return tx<number, Action>(
           state,
-          (async function*() {
+          async function*() {
             yield { type: "increment" };
             await delay(5);
             yield { type: "increment" };
             yield { type: "increment" };
-          })(),
+          },
         );
       case "increment":
         return tx(state + 1);
@@ -151,13 +151,13 @@ test("store - transactional check-then-update-then-effect", async () => {
         // Update flag AND issue effect in a single transaction
         return tx<Model, Action>(
           { ...state, fetching: true },
-          (async function*() {
+          async function*() {
             await delay(10);
             yield { type: "set", value: 42 };
-          })(),
+          },
         );
       case "set":
-        return tx({ ...state, count: action.value, fetching: false });
+        return tx({ ...state, count: action.value, fetching: false } as Model);
       default:
         return unknown(state, action);
     }

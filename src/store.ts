@@ -1,4 +1,4 @@
-import { signal } from "./signal.js";
+import { peek, signal } from "./signal.js";
 import { type SendableSignal } from "./send.js";
 import * as Effect from "./effect.js";
 
@@ -13,7 +13,7 @@ export type Tx<Model, Action> = {
 /** Create a transaction */
 export const tx = <Model, Action>(
   state: Model,
-  effect: Effect.Effect<Model, Action> = Effect.none<Model, Action>(),
+  effect: Effect.Effect<Model, Action> = Effect.none<Action>,
 ): Tx<Model, Action> => ({ state, effect });
 
 export type Update<Model, Action, Context> = (
@@ -50,9 +50,10 @@ export function store<Model, Action, Context>(
   const $state = signal(initial);
 
   const forkEffect = async (effect: Effect.Effect<Model, Action>) => {
+    const generator = effect(get);
     while (true) {
       try {
-        const { value, done } = await effect.next(get());
+        const { value, done } = await generator.next();
 
         if (done) {
           return
