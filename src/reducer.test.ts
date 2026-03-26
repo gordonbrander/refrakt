@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { reducer, type Reducer, unknown, withLogging } from "./reducer.js";
+import { reducer, type Reducer, unreachable, withLogging } from "./reducer.js";
 
 // Test types for actions
 type CounterAction =
@@ -37,7 +37,7 @@ test("reducer - creates reducer with initial state", () => {
       case "add":
         return state + action.value;
       default:
-        return unknown(state, action);
+        return unreachable(state, action);
     }
   };
 
@@ -58,7 +58,7 @@ test("reducer - handles actions through send", () => {
       case "add":
         return state + action.value;
       default:
-        return unknown(state, action);
+        return unreachable(state, action);
     }
   };
 
@@ -111,7 +111,7 @@ test("reducer - works with complex state", () => {
           todos: state.todos.filter((todo) => todo.id !== action.id),
         };
       default:
-        return unknown(state, action);
+        return unreachable(state, action);
     }
   };
 
@@ -199,29 +199,29 @@ test("withLogging - respects log predicate", () => {
   }
 });
 
-test("unknown - logs warning and returns state unchanged", () => {
-  const originalWarn = console.warn;
-  let warningMessage = "";
+test("unreachable - logs error and returns state unchanged", () => {
+  const originalError = console.error;
+  let errorMessage = "";
 
-  // Mock console.warn
-  console.warn = (msg: string, data: unknown) => {
-    warningMessage = `${msg} ${JSON.stringify(data)}`;
+  // Mock console.error
+  console.error = (msg: string, data: unknown) => {
+    errorMessage = `${msg} ${JSON.stringify(data)}`;
   };
 
   try {
     const state = { count: 5 };
     const unknownAction = { type: "unknown", data: "test" };
 
-    // @ts-expect-error - we want to test updateUnknown
-    const result = unknown(state, unknownAction);
+    // @ts-expect-error - we want to test unreachable
+    const result = unreachable(state, unknownAction);
 
     assert.strictEqual(result, state);
     assert.strictEqual(
-      warningMessage,
-      'Unknown action {"type":"unknown","data":"test"}',
+      errorMessage,
+      'Unreachable action {"type":"unknown","data":"test"}',
     );
   } finally {
-    // Restore console.warn
-    console.warn = originalWarn;
+    // Restore console.error
+    console.error = originalError;
   }
 });

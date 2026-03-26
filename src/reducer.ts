@@ -67,13 +67,13 @@ export const withLogging = <Model, Action>(
 };
 
 /**
- * Convenience function for logging unknown actions in the default arm
+ * Convenience function for handling unreachable actions in the default arm
  * of a reducer.
  *
  * Because `action` is of type `never`, Typescript will show an error under
  * this argument if the switch is not exhaustive.
  */
-export const unknown = <Model>(state: Model, action: never): Model => {
-  console.warn("Unknown action", action);
+export const unreachable = <Model>(state: Model, action: never): Model => {
+  console.error("Unreachable action", action);
   return state;
 };
