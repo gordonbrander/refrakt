@@ -103,7 +103,7 @@ const update = (state: Model, action: Action): Tx<Model, Action> => {
       return tx({ ...state, count: state.count + 1 });
     case "fetch":
       // State update and fx in a single transaction
-      return tx({ ...state, fetching: true }, function* () {
+      return tx({ ...state, fetching: true }, async function* () {
         const response = await fetch("/api/count");
         const data = await response.json();
         yield { type: "fetch-complete", value: data.count };
