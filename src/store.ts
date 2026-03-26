@@ -1,19 +1,26 @@
 import { signal } from "./signal.js";
 import { type SendableSignal } from "./send.js";
-import * as Fx from "./fx.js";
+
+/** Represents an fx that can be executed against a model state, yielding actions. */
+export type Fx<Model, Action> = (state: () => Model) => AsyncGenerator<Action>;
+
+/** A no-op fx that yields nothing. */
+export async function* noFx<Action>(): AsyncGenerator<Action> {
+  // Yield nothing
+}
 
 /**
  * A transaction is a value that represents a state update and optional fx.
  */
 export type Tx<Model, Action> = {
   state: Model;
-  fx: Fx.Fx<Model, Action>;
+  fx: Fx<Model, Action>;
 };
 
 /** Create a transaction */
 export const tx = <Model, Action>(
   state: Model,
-  fx: Fx.Fx<Model, Action> = Fx.none<Action>,
+  fx: Fx<Model, Action> = noFx<Action>,
 ): Tx<Model, Action> => ({ state, fx });
 
 export type Update<Model, Action, Context> = (
@@ -49,7 +56,7 @@ export function store<Model, Action, Context>(
 ): Store<Model, Action> {
   const $state = signal(initial);
 
-  const forkFx = async (fx: Fx.Fx<Model, Action>) => {
+  const forkFx = async (fx: Fx<Model, Action>) => {
     const generator = fx(get);
     while (true) {
       try {
