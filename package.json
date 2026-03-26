@@ -43,11 +43,12 @@
   ],
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run check && npm run lint && npm run check-fmt && npm run build",
     "test": "npm run build && node --test \"dist/**/*.test.js\"",
     "check": "tsc --noEmit",
     "fmt": "prettier --write .",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "check-fmt": "prettier --check ."
   },
   "keywords": [
     "signals",
