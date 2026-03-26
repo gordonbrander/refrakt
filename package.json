@@ -31,6 +31,10 @@
     "./reducer.js": {
       "types": "./dist/reducer.d.ts",
       "import": "./dist/reducer.js"
+    },
+    "./scope.js": {
+      "types": "./dist/scope.d.ts",
+      "import": "./dist/scope.js"
     }
   },
   "files": [
