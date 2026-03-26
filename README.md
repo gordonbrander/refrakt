@@ -7,7 +7,7 @@ Refrakt is built around a simple concept: define a signal with a reducer, send a
 ## Features
 
 - **Fine-grained reactivity**: Built on top of TC39 signals.
-- **Managed effects**: Elm-style transactional effect management.
+- **Managed fx**: Elm-style transactional fx management.
 - **Scoped stores**: Create child stores that project parent state and tag actions.
 - **Minimal dependencies**: Uses only `signal-polyfill` library for maximum compatibility.
 
@@ -85,7 +85,7 @@ console.log(counterStore.get()); // 1
 
 ## Store
 
-`store()` returns a signal of exactly the same type as `reducer()`, but with additional support for managed side-effects. Instead of returning just the next state, a store's reducer returns a transaction object containing the next state _and_ optional side-effects. Effects are modeled as async generator functions that yield zero or more actions back to the store.
+`store()` returns a signal of exactly the same type as `reducer()`, but with additional support for managed side-effects. Instead of returning just the next state, a store's reducer returns a transaction object containing the next state _and_ optional side-effects. Side-effects are modeled as async generator functions that yield zero or more actions back to the store.
 
 ```typescript
 import { store, tx, type Tx } from "refrakt/store.js";
@@ -102,7 +102,7 @@ const update = (state: Model, action: Action): Tx<Model, Action> => {
     case "increment":
       return tx({ ...state, count: state.count + 1 });
     case "fetch":
-      // State update and effect in a single transaction
+      // State update and fx in a single transaction
       return tx({ ...state, fetching: true }, function* () {
         const response = await fetch("/api/count");
         const data = await response.json();
@@ -116,20 +116,20 @@ const update = (state: Model, action: Action): Tx<Model, Action> => {
 };
 
 const counterStore = store(update, { count: 0, fetching: false });
-counterStore.send({ type: "fetch" }); // Sets `fetching` and kicks off effect generator
+counterStore.send({ type: "fetch" }); // Sets `fetching` and kicks off fx generator
 counterStore.get().fetching; // true
 ```
 
-`tx(state, effect?)` offers a convenience function for creating transaction objects. Transactions are just plain objects with state and effect properties:
+`tx(state, fx?)` offers a convenience function for creating transaction objects. Transactions are just plain objects with state and fx properties:
 
 ```typescript
 type Tx<Model, Action> = {
   state: Model;
-  effect: (state: () => Model): AsyncGenerator<Action>;
+  fx: (state: () => Model): AsyncGenerator<Action>;
 }
 ```
 
-The effect generator function also receives a `state()` function, which can be used to check on the state of the store after time has ellapsed.
+The fx generator function also receives a `state()` function, which it can use to check on the state of the store after time has elapsed.
 
 ```typescript
 async function* (state: () => Model) {
@@ -141,9 +141,9 @@ async function* (state: () => Model) {
 }
 ```
 
-### Transactional effects
+### Transactional side-effects
 
-Why transactions? When do you need a store? For simple side-effects, a signal or reducer combined with `effect()` may be enough. This is the equivalent of React's `useEffect()`:
+Why store? Why transactions? For simple side-effects, a signal or reducer combined with `effect()` may be enough. For example, this gives you the equivalent of React's `useEffect()`:
 
 ```typescript
 import { effect } from "refrakt/signal.js";
@@ -159,9 +159,9 @@ effect(() => {
 });
 ```
 
-However, when side-effects become sufficiently complex, you might want to reach for a store. The key advantage is that store lets you implement structured, **transactional** effects.
+However, when side-effects become sufficiently complex, you may want to reach for a store. The key advantage is that store lets you implement structured and **transactional** side-effects.
 
-**Transactional effects** update in response to actions _during the same transaction as the state_. This means you can implement atomic check-then-update-then-effect patterns in response to actions. For example, preventing duplicate fetches:
+**Fx** are issued in response to actions _during the same transaction as the state_. This means you can implement atomic check-then-update-then-fx patterns in response to actions. For example, preventing duplicate fetches:
 
 ```typescript
 case 'fetch':
@@ -169,7 +169,7 @@ case 'fetch':
   if (state.fetching) {
     return tx(state);
   }
-  // Set flag AND issue effect atomically
+  // Set flag AND issue fx atomically
   return tx(
     { ...state, fetching: true },
     async function* () {
@@ -179,7 +179,7 @@ case 'fetch':
   );
 ```
 
-Because each update runs sequentially and atomically, and the flag and effect are set during the same transaction, there is no window where a duplicate fetch can slip through. It can be difficult to achieve this kind of atomic control when state and effects are separate.
+Because each update runs sequentially and atomically, and the flag and fx are set during the same transaction, there is no window where a duplicate fetch can slip through. It can be difficult to achieve this kind of atomic control over effects when state and effects are handled separately.
 
 ### Context
 
@@ -341,7 +341,7 @@ Because scoped stores are indistinguishable from parent stores, you can replace 
 
 ## Async Iterator Utilities
 
-The `iter` submodule provides utility functions for working with async generators. These can be useful for merging and mapping effects between component domains.
+The `iter` submodule provides utility functions for working with async generators. These can be useful for merging and mapping fx between component domains.
 
 - `mergeAsync(...iterables)` - Merge multiple async iterables, yielding values in interleaved order as they become available
 - `sequenceAsync(...iterables)` - Sequence async iterables, yielding all values from the first before moving to the next
@@ -350,7 +350,7 @@ The `iter` submodule provides utility functions for working with async generator
 ## Utility Functions
 
 - `forward(send, tag)` - Transform a send function so that it tags actions on the way out (`refrakt/send.js`)
-- `tx(state, effects?)` - Create a transaction with state and optional effects (`refrakt/store.js`)
+- `tx(state, fx?)` - Create a transaction with state and optional fx (`refrakt/store.js`)
 - `unknown(state, action)` - Default handler for unknown actions in switch default arm; enforces exhaustive switches via `never` type (available in both `refrakt/store.js` and `refrakt/reducer.js`)
 
 ## License

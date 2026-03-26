@@ -20,9 +20,9 @@
       "types": "./dist/send.d.ts",
       "import": "./dist/send.js"
     },
-    "./effect.js": {
-      "types": "./dist/effect.d.ts",
-      "import": "./dist/effect.js"
+    "./fx.js": {
+      "types": "./dist/fx.d.ts",
+      "import": "./dist/fx.js"
     },
     "./iter.js": {
       "types": "./dist/iter.d.ts",

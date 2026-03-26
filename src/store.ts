@@ -1,20 +1,20 @@
 import { signal } from "./signal.js";
 import { type SendableSignal } from "./send.js";
-import * as Effect from "./effect.js";
+import * as Fx from "./fx.js";
 
 /**
- * A transaction is a value that represents a state update and optional effects.
+ * A transaction is a value that represents a state update and optional fx.
  */
 export type Tx<Model, Action> = {
   state: Model;
-  effect: Effect.Effect<Model, Action>;
+  fx: Fx.Fx<Model, Action>;
 };
 
 /** Create a transaction */
 export const tx = <Model, Action>(
   state: Model,
-  effect: Effect.Effect<Model, Action> = Effect.none<Action>,
-): Tx<Model, Action> => ({ state, effect });
+  fx: Fx.Fx<Model, Action> = Fx.none<Action>,
+): Tx<Model, Action> => ({ state, fx });
 
 export type Update<Model, Action, Context> = (
   state: Model,
@@ -49,8 +49,8 @@ export function store<Model, Action, Context>(
 ): Store<Model, Action> {
   const $state = signal(initial);
 
-  const forkEffect = async (effect: Effect.Effect<Model, Action>) => {
-    const generator = effect(get);
+  const forkFx = async (fx: Fx.Fx<Model, Action>) => {
+    const generator = fx(get);
     while (true) {
       try {
         const { value, done } = await generator.next();
@@ -80,9 +80,9 @@ export function store<Model, Action, Context>(
    * This method is hard-bound to the reducer so you can pass it around as a function.
    */
   const send = (action: Action) => {
-    const { state, effect } = update($state.get(), action, context!);
+    const { state, fx } = update($state.get(), action, context!);
     $state.set(state);
-    forkEffect(effect);
+    forkFx(fx);
   };
 
   return { get, send };
