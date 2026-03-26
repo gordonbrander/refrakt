@@ -17,31 +17,35 @@ Here's a simple counter example using [Lit](https://lit.dev/) for UI.
 
 ```typescript
 import { reducer } from "refrakt/reducer.js";
-import { LitElement, html } from 'lit';
-import { customElement } from 'lit/decorators.js';
-import { SignalWatcher } from '@lit-labs/signals';
+import { LitElement, html } from "lit";
+import { customElement } from "lit/decorators.js";
+import { SignalWatcher } from "@lit-labs/signals";
 
 type Model = { count: number };
-type Action = { type: 'inc' } | { type: 'dec' };
+type Action = { type: "inc" } | { type: "dec" };
 
 const update = (state: Model, action: Action) => {
   switch (action.type) {
-    case 'inc': return { count: state.count + 1 };
-    case 'dec': { count: state.count - 1 };
-    default: return state;
+    case "inc":
+      return { count: state.count + 1 };
+    case "dec": {
+      count: state.count - 1;
+    }
+    default:
+      return state;
   }
 };
 
 const counter = reducer(update, { count: 0 });
 
-@customElement('counter-app')
+@customElement("counter-app")
 class CounterApp extends SignalWatcher(LitElement) {
   render() {
     return html`
       <div>
         <h1>Count: ${counter.get().count}</h1>
-        <button @click=${() => counter.send({ type: 'inc' })}>+</button>
-        <button @click=${() => counter.send({ type: 'dec' })}>-</button>
+        <button @click=${() => counter.send({ type: "inc" })}>+</button>
+        <button @click=${() => counter.send({ type: "dec" })}>-</button>
       </div>
     `;
   }
@@ -53,20 +57,20 @@ class CounterApp extends SignalWatcher(LitElement) {
 `reducer()` creates a signal updated via a pure reducer function. It works like React's `useReducer()` hook, except it's a signal.
 
 ```typescript
-import { reducer } from 'refrakt/reducer.js';
+import { reducer } from "refrakt/reducer.js";
 
 type CounterAction =
-  | { type: 'increment' }
-  | { type: 'decrement' }
-  | { type: 'set', value: number };
+  | { type: "increment" }
+  | { type: "decrement" }
+  | { type: "set"; value: number };
 
 const update = (state: number, action: CounterAction): number => {
   switch (action.type) {
-    case 'increment':
+    case "increment":
       return state + 1;
-    case 'decrement':
+    case "decrement":
       return state - 1;
-    case 'set':
+    case "set":
       return action.value;
     default:
       return state;
@@ -75,39 +79,36 @@ const update = (state: number, action: CounterAction): number => {
 
 const counterStore = reducer(update, 0);
 
-counterStore.send({ type: 'increment' });
+counterStore.send({ type: "increment" });
 console.log(counterStore.get()); // 1
 ```
 
 ## Store
 
-`store()` returns a signal of exactly the same type as `reducer()`, but with additional support for managed side-effects. Instead of returning just the next state, a store's reducer returns a transaction object containing the next state *and* optional side-effects. Effects are modeled as async generator functions that yield zero or more actions back to the store.
+`store()` returns a signal of exactly the same type as `reducer()`, but with additional support for managed side-effects. Instead of returning just the next state, a store's reducer returns a transaction object containing the next state _and_ optional side-effects. Effects are modeled as async generator functions that yield zero or more actions back to the store.
 
 ```typescript
-import { store, tx, type Tx } from 'refrakt/store.js';
+import { store, tx, type Tx } from "refrakt/store.js";
 
-type Model = { count: number, fetching: boolean };
+type Model = { count: number; fetching: boolean };
 
 type Action =
-  | { type: 'increment' }
-  | { type: 'fetch' }
-  | { type: 'fetch-complete', value: number };
+  | { type: "increment" }
+  | { type: "fetch" }
+  | { type: "fetch-complete"; value: number };
 
 const update = (state: Model, action: Action): Tx<Model, Action> => {
   switch (action.type) {
-    case 'increment':
+    case "increment":
       return tx({ ...state, count: state.count + 1 });
-    case 'fetch':
+    case "fetch":
       // State update and effect in a single transaction
-      return tx(
-        { ...state, fetching: true },
-        function* () {
-          const response = await fetch('/api/count');
-          const data = await response.json();
-          yield { type: 'fetch-complete', value: data.count };
-        }
-      );
-    case 'fetch-complete':
+      return tx({ ...state, fetching: true }, function* () {
+        const response = await fetch("/api/count");
+        const data = await response.json();
+        yield { type: "fetch-complete", value: data.count };
+      });
+    case "fetch-complete":
       return tx({ ...state, count: action.value, fetching: false });
     default:
       return tx(state);
@@ -115,7 +116,7 @@ const update = (state: Model, action: Action): Tx<Model, Action> => {
 };
 
 const counterStore = store(update, { count: 0, fetching: false });
-counterStore.send({ type: 'fetch' }); // Sets `fetching` and kicks off effect generator
+counterStore.send({ type: "fetch" }); // Sets `fetching` and kicks off effect generator
 counterStore.get().fetching; // true
 ```
 
@@ -155,12 +156,12 @@ const state = reducer((state: Model, action: Action) => {
 // Fires every time state changes
 effect(() => {
   service.doSomething(state.get());
-})
+});
 ```
 
 However, when side-effects become sufficiently complex, you might want to reach for a store. The key advantage is that store lets you implement structured, **transactional** effects.
 
-**Transactional effects** update in response to actions *during the same transaction as the state*. This means you can implement atomic check-then-update-then-effect patterns in response to actions. For example, preventing duplicate fetches:
+**Transactional effects** update in response to actions _during the same transaction as the state_. This means you can implement atomic check-then-update-then-effect patterns in response to actions. For example, preventing duplicate fetches:
 
 ```typescript
 case 'fetch':
@@ -199,7 +200,7 @@ This can be used to expose external services to the update function.
 The signals module re-exports the TC39 signals polyfill, as well as providing a handful of convenience functions.
 
 ```typescript
-import { signal, computed, effect } from 'refrakt/signal.js';
+import { signal, computed, effect } from "refrakt/signal.js";
 
 // Create a `State` signal
 const count = signal(10);
@@ -213,7 +214,7 @@ When you want to react to signal changes, you can use `effect`. Effects are auto
 ```ts
 // React to changes
 const cleanup = effect(() => {
-  console.log('Count:', count.get(), 'Doubled:', doubled.get());
+  console.log("Count:", count.get(), "Doubled:", doubled.get());
 });
 
 count.set(20); // Logs: "Count: 20 Doubled: 40"
@@ -232,7 +233,7 @@ const username = computed(() => myStore.get().account.profile.username);
 Both `store` and `reducer` provide a `withLogging` function that wraps an update/reducer function with debug logging.
 
 ```typescript
-import { store, tx, withLogging, type Update } from 'refrakt/store.js';
+import { store, tx, withLogging, type Update } from "refrakt/store.js";
 
 const update: Update<Model, Action, void> = (state, action) => {
   // ...
@@ -243,17 +244,18 @@ const myStore = store(loggedUpdate, initialState);
 ```
 
 ```typescript
-import { reducer, withLogging, type Reducer } from 'refrakt/reducer.js';
+import { reducer, withLogging, type Reducer } from "refrakt/reducer.js";
 
 const step: Reducer<Model, Action> = (state, action) => {
   // ...
 };
 
-const loggedStep = withLogging(step, { name: 'myReducer' });
+const loggedStep = withLogging(step, { name: "myReducer" });
 const myStore = reducer(loggedStep, initialState);
 ```
 
 Example output:
+
 ```
 <- store { type: 'increment' }
 -> store { count: 1 }
@@ -272,7 +274,7 @@ const loggedUpdate = withLogging(update, {
 `scope` creates a child store from a parent store. The child store's state is derived from the parent state, and all actions are tagged and routed through the parent store.
 
 ```typescript
-import { scope } from 'refrakt/scope.js';
+import { scope } from "refrakt/scope.js";
 
 const childStore = scope({
   store: parentStore,
@@ -281,7 +283,7 @@ const childStore = scope({
   // Tag child actions, transforming them into parent actions
   tag: (action: ChildAction): ParentAction => ({
     type: "child",
-    action
+    action,
   }),
 });
 ```
@@ -293,13 +295,13 @@ Components can be initialized with their own store by default. This store can be
 ```typescript
 // child-component.ts
 import { store, tx, type Store } from "refrakt/store.js";
-import { LitElement, html } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import { watch } from '@lit-labs/signals';
+import { LitElement, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import { watch } from "@lit-labs/signals";
 
 // ...
 
-@customElement('child-component')
+@customElement("child-component")
 class ChildComponent extends LitElement {
   @property({ attribute: false })
   store: Store<ChildModel, ChildAction> = store(update, { count: 0 });
@@ -311,8 +313,8 @@ class ChildComponent extends LitElement {
 ```typescript
 // parent-component.ts
 import { scope } from "refrakt/scope.js";
-import { LitElement, html } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { LitElement, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import * as ChildComponent from "./child-component.js";
 
 // ...
@@ -323,12 +325,12 @@ const childStore = scope({
   tag: (action: ChildAction): ParentAction => ({ type: "child", action }),
 });
 
-@customElement('parent-component')
+@customElement("parent-component")
 class ParentComponent extends LitElement {
   render() {
     return html`
       <div class="parent">
-          <child-component .store=${childStore}></child-component>
+        <child-component .store=${childStore}></child-component>
       </div>
     `;
   }

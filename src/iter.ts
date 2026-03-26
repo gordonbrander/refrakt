@@ -49,10 +49,7 @@ export async function* mergeAsync<T>(...iterables: AsyncIterable<T>[]) {
       yield result.value;
 
       // Immediately queue the next value from this iterator
-      pending.set(
-        key,
-        _getNextKeyedResult(iterators[key], key),
-      );
+      pending.set(key, _getNextKeyedResult(iterators[key], key));
     }
     // If done, iterator is exhausted and won't be added back
   }

@@ -10,10 +10,11 @@ export type SendableSignal<Model, Action> = AnySignal<Model> & {
  * Transform a send function so that it tags actions on the way out.
  * This can be useful for mapping actions from one component domain to another.
  */
-export const forward = <ActionA, ActionB>(
-  send: (action: ActionA) => void,
-  tag: (action: ActionB) => ActionA,
-) =>
+export const forward =
+  <ActionA, ActionB>(
+    send: (action: ActionA) => void,
+    tag: (action: ActionB) => ActionA,
+  ) =>
   (action: ActionB): void => {
     send(tag(action));
   };

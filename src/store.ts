@@ -1,4 +1,4 @@
-import { peek, signal } from "./signal.js";
+import { signal } from "./signal.js";
 import { type SendableSignal } from "./send.js";
 import * as Effect from "./effect.js";
 
@@ -56,8 +56,8 @@ export function store<Model, Action, Context>(
         const { value, done } = await generator.next();
 
         if (done) {
-          return
-        };
+          return;
+        }
 
         if (value != undefined) {
           send(value);
@@ -86,7 +86,7 @@ export function store<Model, Action, Context>(
   };
 
   return { get, send };
-};
+}
 
 const alwaysLog = () => true;
 
@@ -105,8 +105,8 @@ export const withLogging = <Model, Action, Context>(
     log = alwaysLog,
   }: {
     name?: string;
-    log?: () => boolean
-  } = {}
+    log?: () => boolean;
+  } = {},
 ): Update<Model, Action, Context> => {
   return (state: Model, action: Action, context: Context) => {
     if (log()) {

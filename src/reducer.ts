@@ -1,10 +1,7 @@
 import { signal } from "./signal.js";
 import { type SendableSignal } from "./send.js";
 
-export type Reducer<Model, Action> = (
-  state: Model,
-  action: Action,
-) => Model;
+export type Reducer<Model, Action> = (state: Model, action: Action) => Model;
 
 /**
  * Create a signals-based reducer that updates through the provided `step`
@@ -54,8 +51,8 @@ export const withLogging = <Model, Action>(
     log = alwaysLog,
   }: {
     name?: string;
-    log?: () => boolean
-  } = {}
+    log?: () => boolean;
+  } = {},
 ): Reducer<Model, Action> => {
   return (state: Model, action: Action) => {
     if (log()) {
@@ -67,7 +64,7 @@ export const withLogging = <Model, Action>(
     }
     return next;
   };
-}
+};
 
 /**
  * Convenience function for logging unknown actions in the default arm
@@ -76,10 +73,7 @@ export const withLogging = <Model, Action>(
  * Because `action` is of type `never`, Typescript will show an error under
  * this argument if the switch is not exhaustive.
  */
-export const unknown = <Model>(
-  state: Model,
-  action: never,
-): Model => {
+export const unknown = <Model>(state: Model, action: never): Model => {
   console.warn("Unknown action", action);
   return state;
 };

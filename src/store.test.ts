@@ -68,20 +68,15 @@ test("store - handles actions through send", () => {
 });
 
 test("store - transactional effects yield actions", async () => {
-  type Action =
-    | { type: "fetch" }
-    | { type: "set"; value: number };
+  type Action = { type: "fetch" } | { type: "set"; value: number };
 
   const update: Update<number, Action, void> = (state, action) => {
     switch (action.type) {
       case "fetch":
-        return tx<number, Action>(
-          state,
-          async function*() {
-            await delay(10);
-            yield { type: "set", value: 42 };
-          },
-        );
+        return tx<number, Action>(state, async function* () {
+          await delay(10);
+          yield { type: "set", value: 42 };
+        });
       case "set":
         return tx(action.value);
       default:
@@ -100,22 +95,17 @@ test("store - transactional effects yield actions", async () => {
 });
 
 test("store - effects can yield multiple actions", async () => {
-  type Action =
-    | { type: "start" }
-    | { type: "increment" };
+  type Action = { type: "start" } | { type: "increment" };
 
   const update: Update<number, Action, void> = (state, action) => {
     switch (action.type) {
       case "start":
-        return tx<number, Action>(
-          state,
-          async function*() {
-            yield { type: "increment" };
-            await delay(5);
-            yield { type: "increment" };
-            yield { type: "increment" };
-          },
-        );
+        return tx<number, Action>(state, async function* () {
+          yield { type: "increment" };
+          await delay(5);
+          yield { type: "increment" };
+          yield { type: "increment" };
+        });
       case "increment":
         return tx(state + 1);
       default:
@@ -137,9 +127,7 @@ test("store - transactional check-then-update-then-effect", async () => {
     fetching: boolean;
   };
 
-  type Action =
-    | { type: "fetch" }
-    | { type: "set"; value: number };
+  type Action = { type: "fetch" } | { type: "set"; value: number };
 
   const update: Update<Model, Action, void> = (state, action) => {
     switch (action.type) {
@@ -151,7 +139,7 @@ test("store - transactional check-then-update-then-effect", async () => {
         // Update flag AND issue effect in a single transaction
         return tx<Model, Action>(
           { ...state, fetching: true },
-          async function*() {
+          async function* () {
             await delay(10);
             yield { type: "set", value: 42 };
           },
@@ -280,7 +268,7 @@ test("unknown - logs warning and returns state unchanged", () => {
     const state = { count: 5 };
     const unknownAction = { type: "unknown", data: "test" };
 
-    // @ts-ignore - we want to test updateUnknown
+    // @ts-expect-error - we want to test updateUnknown
     const result = unknown(state, unknownAction);
 
     assert.strictEqual(result.state, state);

@@ -21,9 +21,9 @@ export const scope = <ModelA, ActionA, ModelB, ActionB>({
   get,
   tag,
 }: {
-  store: SendableSignal<ModelA, ActionA>,
-  get: (state: ModelA) => ModelB,
-  tag: (action: ActionB) => ActionA,
+  store: SendableSignal<ModelA, ActionA>;
+  get: (state: ModelA) => ModelB;
+  tag: (action: ActionB) => ActionA;
 }): SendableSignal<ModelB, ActionB> => {
   const $state = computed(() => get(store.get()));
   const send = forward(store.send, tag);

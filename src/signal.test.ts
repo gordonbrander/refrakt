@@ -279,7 +279,7 @@ test("effect - handles errors gracefully", async () => {
       if (count.get() === 5) {
         throw new Error("Test error");
       }
-    } catch (_) {
+    } catch (_error) {
       errorThrown = true;
     }
   });

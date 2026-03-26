@@ -1,11 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  reducer,
-  type Reducer,
-  unknown,
-  withLogging,
-} from "./reducer.js";
+import { reducer, type Reducer, unknown, withLogging } from "./reducer.js";
 
 // Test types for actions
 type CounterAction =
@@ -91,11 +86,14 @@ test("reducer - works with complex state", () => {
       case "add":
         return {
           ...state,
-          todos: [...state.todos, {
-            id: state.nextId,
-            text: action.text,
-            completed: false,
-          }],
+          todos: [
+            ...state.todos,
+            {
+              id: state.nextId,
+              text: action.text,
+              completed: false,
+            },
+          ],
           nextId: state.nextId + 1,
         };
       case "toggle":
@@ -104,7 +102,7 @@ test("reducer - works with complex state", () => {
           todos: state.todos.map((todo) =>
             todo.id === action.id
               ? { ...todo, completed: !todo.completed }
-              : todo
+              : todo,
           ),
         };
       case "remove":
@@ -214,7 +212,7 @@ test("unknown - logs warning and returns state unchanged", () => {
     const state = { count: 5 };
     const unknownAction = { type: "unknown", data: "test" };
 
-    // @ts-ignore - we want to test updateUnknown
+    // @ts-expect-error - we want to test updateUnknown
     const result = unknown(state, unknownAction);
 
     assert.strictEqual(result, state);
