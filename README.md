@@ -81,9 +81,7 @@ console.log(counterStore.get()); // 1
 
 ## Store
 
-`store()` returns a signal looks exactly like the type returned by `reducer()`, but has additional support for managed side-effects. Instead of the reducer returning just the next state, a store reducer returns a transaction object containing the next state *and* optional side-effects.
-
-Effects are modeled as async generator functions that yield zero or more actions over time.
+`store()` returns a signal of exactly the same type as `reducer()`, but with additional support for managed side-effects. Instead of returning just the next state, a store's reducer returns a transaction object containing the next state *and* optional side-effects. Effects are modeled as async generator functions that yield zero or more actions back to the store.
 
 ```typescript
 import { store, tx, type Tx } from 'refrakt/store.js';
@@ -117,12 +115,20 @@ const update = (state: Model, action: Action): Tx<Model, Action> => {
 };
 
 const counterStore = store(update, { count: 0, fetching: false });
-counterStore.send({ type: 'increment' });
+counterStore.send({ type: 'fetch' }); // Sets `fetching` and kicks off effect generator
+counterStore.get().fetching; // true
 ```
 
-`tx(state, effect?)` is a convenience factory for creating transactions. Effects are async generators that yield actions back to the store.
+`tx(state, effect?)` offers a convenience function for creating transaction objects. Transactions are just plain objects with state and effect properties:
 
-Effect generator functions can also take an optional `state()` argument, which can be used to check in on the current state of the store as the generator progresses.
+```typescript
+type Tx<Model, Action> = {
+  state: Model;
+  effect: (state: () => Model): AsyncGenerator<Action>;
+}
+```
+
+The effect generator function also receives a `state()` function, which can be used to check on the state of the store after time has ellapsed.
 
 ```typescript
 async function* (state: () => Model) {
@@ -136,9 +142,25 @@ async function* (state: () => Model) {
 
 ### Transactional effects
 
-Why store? Why return a transaction? For simple effect cases, a reducer combined with a signal `effect()` may be enough. But when side-effects become complex, you might want a store.
+Why transactions? When do you need a store? For simple side-effects, a signal or reducer combined with `effect()` may be enough. This is the equivalent of React's `useEffect()`:
 
-The key advantage is that store lets you implement **transactional** side effects. This lets you implement atomic check-then-update-then-effect patterns. For example, preventing duplicate fetches:
+```typescript
+import { effect } from "refrakt/signal.js";
+import { reducer } from "refrakt/reducer.js";
+
+const state = reducer((state: Model, action: Action) => {
+  // ...
+}, initial);
+
+// Fires every time state changes
+effect(() => {
+  service.doSomething(state.get());
+})
+```
+
+However, when side-effects become sufficiently complex, you might want to reach for a store. The key advantage is that store lets you implement structured, **transactional** effects.
+
+**Transactional effects** update in response to actions *during the same transaction as the state*. This means you can implement atomic check-then-update-then-effect patterns in response to actions. For example, preventing duplicate fetches:
 
 ```typescript
 case 'fetch':
@@ -156,7 +178,7 @@ case 'fetch':
   );
 ```
 
-Because update runs sequentially and atomically, and the flag and effect are set during the same transaction, there is no window where a duplicate fetch can slip through. It is difficult to achieve this kind of atomic control when state and effects are separated.
+Because each update runs sequentially and atomically, and the flag and effect are set during the same transaction, there is no window where a duplicate fetch can slip through. It can be difficult to achieve this kind of atomic control when state and effects are separate.
 
 ### Context
 
@@ -216,7 +238,7 @@ const update: Update<Model, Action, void> = (state, action) => {
   // ...
 };
 
-const loggedUpdate = withLogging(update, { name: 'myStore' });
+const loggedUpdate = withLogging(update);
 const myStore = store(loggedUpdate, initialState);
 ```
 
@@ -233,15 +255,14 @@ const myStore = reducer(loggedStep, initialState);
 
 Example output:
 ```
-<- myStore { type: 'increment' }
--> myStore { count: 1 }
+<- store { type: 'increment' }
+-> store { count: 1 }
 ```
 
 You can also pass a `log` predicate to conditionally enable logging:
 
 ```typescript
 const loggedUpdate = withLogging(update, {
-  name: 'myStore',
   log: () => import.meta.env.DEV,
 });
 ```
