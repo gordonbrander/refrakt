@@ -11,12 +11,38 @@ Refrakt is built around a simple concept: define a signal with a reducer, send a
 - **Scoped stores**: Create child stores that project parent state and tag actions.
 - **Minimal dependencies**: Uses only `signal-polyfill` library for maximum compatibility.
 
+## Importing
+
+Refrakt is published as ES modules. The package entry point re-exports the
+primary constructors and core types:
+
+```typescript
+import { signal, computed, effect, reducer, store, tx, scope } from "refrakt";
+```
+
+Every module is also available as a subpath import. Reach for these to pull in
+long-tail helpers such as `withLogging`, `untrack`, `noFx`, and the `iter`
+async-iterator utilities, which are intentionally kept off the main entry point:
+
+```typescript
+import { signal, computed, effect, untrack } from "refrakt/signal.js";
+import { reducer, withLogging } from "refrakt/reducer.js";
+import { store, tx, noFx, withLogging } from "refrakt/store.js";
+import { scope } from "refrakt/scope.js";
+import { forward } from "refrakt/send.js";
+import { assertNever } from "refrakt/never.js";
+import { mergeAsync, sequenceAsync, mapAsync } from "refrakt/iter.js";
+```
+
+The examples below use subpath imports throughout.
+
 ## Example
 
 Here's a simple counter example using [Lit](https://lit.dev/) for UI.
 
 ```typescript
 import { reducer } from "refrakt/reducer.js";
+import { assertNever } from "refrakt/never.js";
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { SignalWatcher } from "@lit-labs/signals";
@@ -24,15 +50,14 @@ import { SignalWatcher } from "@lit-labs/signals";
 type Model = { count: number };
 type Action = { type: "inc" } | { type: "dec" };
 
-const update = (state: Model, action: Action) => {
+const update = (state: Model, action: Action): Model => {
   switch (action.type) {
     case "inc":
       return { count: state.count + 1 };
-    case "dec": {
-      count: state.count - 1;
-    }
+    case "dec":
+      return { count: state.count - 1 };
     default:
-      return state;
+      return assertNever(action);
   }
 };
 
@@ -58,6 +83,7 @@ class CounterApp extends SignalWatcher(LitElement) {
 
 ```typescript
 import { reducer } from "refrakt/reducer.js";
+import { assertNever } from "refrakt/never.js";
 
 type CounterAction =
   | { type: "increment" }
@@ -73,7 +99,7 @@ const update = (state: number, action: CounterAction): number => {
     case "set":
       return action.value;
     default:
-      return state;
+      return assertNever(action);
   }
 };
 
@@ -89,6 +115,7 @@ console.log(counterStore.get()); // 1
 
 ```typescript
 import { store, tx, type Tx } from "refrakt/store.js";
+import { assertNever } from "refrakt/never.js";
 
 type Model = { count: number; fetching: boolean };
 
@@ -111,7 +138,7 @@ const update = (state: Model, action: Action): Tx<Model, Action> => {
     case "fetch-complete":
       return tx({ ...state, count: action.value, fetching: false });
     default:
-      return tx(state);
+      return assertNever(action);
   }
 };
 
@@ -125,8 +152,8 @@ counterStore.get().fetching; // true
 ```typescript
 type Tx<Model, Action> = {
   state: Model;
-  fx: (state: () => Model): AsyncGenerator<Action>;
-}
+  fx: (state: () => Model) => AsyncGenerator<Action>;
+};
 ```
 
 The fx generator function also receives a `state()` function, which it can use to check on the state of the store after time has elapsed.
@@ -294,7 +321,7 @@ Components can be initialized with their own store by default. This store can be
 
 ```typescript
 // child-component.ts
-import { store, tx, type Store } from "refrakt/store.js";
+import { store, tx, type StoreSignal } from "refrakt/store.js";
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { watch } from "@lit-labs/signals";
@@ -304,7 +331,7 @@ import { watch } from "@lit-labs/signals";
 @customElement("child-component")
 class ChildComponent extends LitElement {
   @property({ attribute: false })
-  store: Store<ChildModel, ChildAction> = store(update, { count: 0 });
+  store: StoreSignal<ChildModel, ChildAction> = store(update, { count: 0 });
 
   // ...
 }
@@ -351,7 +378,7 @@ The `iter` submodule provides utility functions for working with async generator
 
 - `forward(send, tag)` - Transform a send function so that it tags actions on the way out (`refrakt/send.js`)
 - `tx(state, fx?)` - Create a transaction with state and optional fx (`refrakt/store.js`)
-- `assertNever(value)` - Enforces exhaustive switches via `never` type. Use in reducers to enforce exhaustive action handling (available in `refrakt/utils.js`)
+- `assertNever(value)` - Enforces exhaustive switches via `never` type. Use in reducers to enforce exhaustive action handling (available in `refrakt/never.js`)
 
 ## License
 

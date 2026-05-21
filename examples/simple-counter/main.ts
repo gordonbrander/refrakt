@@ -1,6 +1,7 @@
 /// A simple counter using Reducer
-import { type Reducer, reducer, unreachable } from "refrakt/reducer.js";
+import { type Reducer, reducer } from "refrakt/reducer.js";
 import { effect } from "refrakt/signal.js";
+import { assertNever } from "refrakt/never.js";
 
 type Action = { type: "increment" } | { type: "decrement" } | { type: "reset" };
 
@@ -13,7 +14,7 @@ const update: Reducer<number, Action> = (state, action) => {
     case "reset":
       return 0;
     default:
-      return unreachable(state, action);
+      return assertNever(action);
   }
 };
 

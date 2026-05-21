@@ -3,6 +3,9 @@ import { type SendableSignal } from "./send.js";
 
 export type Reducer<Model, Action> = (state: Model, action: Action) => Model;
 
+/** The signal returned by `reducer()`: a readable state with a `send` method. */
+export type ReducerSignal<Model, Action> = SendableSignal<Model, Action>;
+
 /**
  * Create a signals-based reducer that updates through the provided `step`
  * reducer function.
@@ -13,7 +16,7 @@ export type Reducer<Model, Action> = (state: Model, action: Action) => Model;
 export const reducer = <Model, Action>(
   step: Reducer<Model, Action>,
   initial: Model,
-): SendableSignal<Model, Action> => {
+): ReducerSignal<Model, Action> => {
   const $state = signal(initial);
 
   /**
@@ -38,7 +41,7 @@ const alwaysLog = () => true;
 
 /**
  * Wrap update function with logging.
- * @param update - The reduer function to wrap.
+ * @param update - The reducer function to wrap.
  * @param options - options object
  * @param options.name - Name of the reducer in log messages. Defaults to "reducer".
  * @param options.log - A function that returns `true` if logging should be enabled.

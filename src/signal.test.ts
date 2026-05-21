@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computed, effect, peek, signal } from "./signal.js";
+import { computed, effect, signal, untrack } from "./signal.js";
 
 test("signal - creates and updates state", () => {
   const count = signal(0);
@@ -174,7 +174,7 @@ test("effect - cleanup stops tracking", async () => {
   assert.strictEqual(effectRuns, 2); // Should not increase
 });
 
-test("peek - reads without tracking", async () => {
+test("untrack - reads without tracking", async () => {
   const count = signal(0);
   let effectRuns = 0;
   let peekedValue = -1;
@@ -183,8 +183,8 @@ test("peek - reads without tracking", async () => {
     effectRuns++;
     // Read count normally (tracked)
     count.get();
-    // Peek at count (not tracked)
-    peekedValue = peek(() => count.get());
+    // Read count without tracking it
+    peekedValue = untrack(() => count.get());
   });
 
   assert.strictEqual(effectRuns, 1);
@@ -200,7 +200,7 @@ test("peek - reads without tracking", async () => {
   cleanup();
 });
 
-test("peek - prevents tracking in complex scenarios", async () => {
+test("untrack - prevents tracking in complex scenarios", async () => {
   const trigger = signal(0);
   const data = signal("initial");
   let effectRuns = 0;
@@ -210,7 +210,7 @@ test("peek - prevents tracking in complex scenarios", async () => {
     effectRuns++;
     // Only track trigger, not data
     trigger.get();
-    const peekedData = peek(() => data.get());
+    const peekedData = untrack(() => data.get());
     results.push(peekedData);
   });
 
@@ -222,7 +222,7 @@ test("peek - prevents tracking in complex scenarios", async () => {
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
   assert.strictEqual(effectRuns, 1); // Should not change
 
-  // Changing trigger should trigger effect and peek at current data
+  // Changing trigger should trigger effect and read current data
   trigger.set(1);
   await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
   assert.strictEqual(effectRuns, 2);

@@ -27,6 +27,7 @@ jobs:
           cache: "npm"
       - run: npm ci
       - run: npm run check
+      - run: npm run check:examples
       - run: npm run lint
       - run: npm run check-fmt
       - run: npm run build --if-present

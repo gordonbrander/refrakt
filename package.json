@@ -3,6 +3,7 @@
   "version": "0.3.2",
   "description": "A lightweight, scalable state management library built on top of TC39 signals",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/main.d.ts",
@@ -32,9 +33,9 @@
       "types": "./dist/scope.d.ts",
       "import": "./dist/scope.js"
     },
-    "./utils.js": {
-      "types": "./dist/utils.d.ts",
-      "import": "./dist/utils.js"
+    "./never.js": {
+      "types": "./dist/never.d.ts",
+      "import": "./dist/never.js"
     }
   },
   "files": [
@@ -46,10 +47,12 @@
     "LICENSE-MIT"
   ],
   "scripts": {
+    "prebuild": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "tsc",
-    "prepublishOnly": "npm run check && npm run lint && npm run check-fmt && npm run build",
+    "prepublishOnly": "npm run check && npm run check:examples && npm run lint && npm run check-fmt && npm run build",
     "test": "npm run build && node --test \"dist/**/*.test.js\"",
     "check": "tsc --noEmit",
+    "check:examples": "tsc -p examples/tsconfig.json",
     "fmt": "prettier --write .",
     "lint": "eslint .",
     "check-fmt": "prettier --check ."

@@ -1,8 +1,9 @@
 /// A stopwatch using Store with fx
 /// Demonstrates using state() within an effect to read current state
 /// and cancel the effect when isRunning becomes false.
-import { type Update, store, tx, unreachable } from "refrakt/store.js";
+import { type Update, store, tx } from "refrakt/store.js";
 import { effect } from "refrakt/signal.js";
+import { assertNever } from "refrakt/never.js";
 
 type Model = {
   isRunning: boolean;
@@ -42,7 +43,7 @@ const update: Update<Model, Action, void> = (state, action) => {
     case "tick":
       return tx({ ...state, elapsed: state.elapsed + 1 } as Model);
     default:
-      return unreachable(state, action);
+      return assertNever(action);
   }
 };
 

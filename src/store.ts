@@ -29,7 +29,8 @@ export type Update<Model, Action, Context> = (
   context: Context,
 ) => Tx<Model, Action>;
 
-export type Store<Model, Action> = SendableSignal<Model, Action>;
+/** The signal returned by `store()`: a readable state with a `send` method. */
+export type StoreSignal<Model, Action> = SendableSignal<Model, Action>;
 
 /**
  * Create a signals-based store that updates through the provided `update`
@@ -43,17 +44,17 @@ export type Store<Model, Action> = SendableSignal<Model, Action>;
 export function store<Model, Action>(
   update: Update<Model, Action, void>,
   initial: Model,
-): Store<Model, Action>;
+): StoreSignal<Model, Action>;
 export function store<Model, Action, Context>(
   update: Update<Model, Action, Context>,
   initial: Model,
   context: Context,
-): Store<Model, Action>;
+): StoreSignal<Model, Action>;
 export function store<Model, Action, Context>(
   update: Update<Model, Action, Context>,
   initial: Model,
   context?: Context,
-): Store<Model, Action> {
+): StoreSignal<Model, Action> {
   const $state = signal(initial);
 
   const forkFx = async (fx: Fx<Model, Action>) => {

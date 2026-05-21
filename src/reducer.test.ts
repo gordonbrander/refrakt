@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { reducer, type Reducer, withLogging } from "./reducer.js";
-import { assertNever } from "./utils.js";
+import { assertNever } from "./never.js";
 
 // Test types for actions
 type CounterAction =

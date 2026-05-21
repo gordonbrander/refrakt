@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { store, tx, type Update, withLogging } from "./store.js";
-import { assertNever } from "./utils.js";
+import { assertNever } from "./never.js";
 
 // Helper function to create a promise that resolves after a delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

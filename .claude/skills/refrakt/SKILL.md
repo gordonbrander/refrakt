@@ -1,25 +1,28 @@
 ---
 name: refrakt
-description: How to use Refrakt signals-based state mangement library
+description: How to use Refrakt signals-based state management library
 ---
 
 Refrakt is a lightweight state management library built on TC39 signals.
 
 ## Modules
 
-- `refrakt/signal.js` — signal primitives: `signal`, `computed`, `effect`, `peek`
-- `refrakt/reducer.js` — pure reducer-based state: `reducer`, `withLogging`, `unreachable`
-- `refrakt/store.js` — transactional state with effects: `store`, `tx`, `noFx`, `withLogging`, `unreachable`
+- `refrakt` — curated entry point: re-exports the primary constructors and core types
+- `refrakt/signal.js` — signal primitives: `signal`, `computed`, `effect`, `untrack`
+- `refrakt/reducer.js` — pure reducer-based state: `reducer`, `withLogging`
+- `refrakt/store.js` — transactional state with effects: `store`, `tx`, `noFx`, `withLogging`
 - `refrakt/send.js` — action utilities: `forward`
 - `refrakt/scope.js` — scoped child stores: `scope`
 - `refrakt/iter.js` — async iterator utilities: `mergeAsync`, `sequenceAsync`, `mapAsync`
+- `refrakt/never.js` — exhaustiveness helpers: `assertNever`, `NeverError`
 
 ## Reducer (pure state, no effects)
 
 Use `reducer` when you only need state transitions with no side effects.
 
 ```ts
-import { type Reducer, reducer, unreachable } from "refrakt/reducer.js";
+import { type Reducer, reducer } from "refrakt/reducer.js";
+import { assertNever } from "refrakt/never.js";
 
 type Action = { type: "increment" } | { type: "decrement" };
 
@@ -30,7 +33,7 @@ const update: Reducer<number, Action> = (state, action) => {
     case "decrement":
       return state - 1;
     default:
-      return unreachable(state, action);
+      return assertNever(action);
   }
 };
 
@@ -44,7 +47,8 @@ counter.get(); // 1
 Use `store` when you need side effects. The update function returns a transaction via `tx(state, fx?)`. Effects are async generators that yield actions back to the store. The `state()` callback passed to fx reads current store state — use it to check flags and cancel effects.
 
 ```ts
-import { type Update, store, tx, unreachable } from "refrakt/store.js";
+import { type Update, store, tx } from "refrakt/store.js";
+import { assertNever } from "refrakt/never.js";
 
 type Model = { isRunning: boolean; elapsed: number };
 type Action = { type: "start" } | { type: "stop" } | { type: "tick" };
@@ -68,7 +72,7 @@ const update: Update<Model, Action, void> = (state, action) => {
     case "tick":
       return tx({ ...state, elapsed: state.elapsed + 1 } as Model);
     default:
-      return unreachable(state, action);
+      return assertNever(action);
   }
 };
 
@@ -101,7 +105,7 @@ const myStore = store(update, initialState, { api: myApi });
 ## Signals
 
 ```ts
-import { signal, computed, effect, peek } from "refrakt/signal.js";
+import { signal, computed, effect, untrack } from "refrakt/signal.js";
 
 const count = signal(0);
 const doubled = computed(() => count.get() * 2);
@@ -112,7 +116,7 @@ const cleanup = effect(() => {
 });
 
 // Read without tracking
-const value = peek(() => count.get());
+const value = untrack(() => count.get());
 ```
 
 ## Scope
@@ -144,7 +148,7 @@ const sendChild = forward(parentStore.send, (action) => ({
 
 ## Key patterns
 
-- **Exhaustive switches**: Use `unreachable(state, action)` in the default arm. TypeScript will error if the switch isn't exhaustive.
+- **Exhaustive switches**: Use `assertNever(action)` (from `refrakt/never.js`) in the default arm. TypeScript will error if the switch isn't exhaustive.
 - **Cancelling effects**: Use `state()` inside fx to read current state. Check a flag (e.g. `isRunning`) to break out of loops.
 - **Atomic check-then-update**: The update function sees state at the moment of dispatch, preventing race conditions.
 - **`as Model` assertions**: Use `as Model` when spreading state in `tx()` calls to help TypeScript infer the transaction type.
