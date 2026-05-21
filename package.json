@@ -31,6 +31,10 @@
     "./scope.js": {
       "types": "./dist/scope.d.ts",
       "import": "./dist/scope.js"
+    },
+    "./utils.js": {
+      "types": "./dist/utils.d.ts",
+      "import": "./dist/utils.js"
     }
   },
   "files": [

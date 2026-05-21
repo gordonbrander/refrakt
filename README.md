@@ -351,7 +351,7 @@ The `iter` submodule provides utility functions for working with async generator
 
 - `forward(send, tag)` - Transform a send function so that it tags actions on the way out (`refrakt/send.js`)
 - `tx(state, fx?)` - Create a transaction with state and optional fx (`refrakt/store.js`)
-- `unknown(state, action)` - Default handler for unknown actions in switch default arm; enforces exhaustive switches via `never` type (available in both `refrakt/store.js` and `refrakt/reducer.js`)
+- `assertNever(value)` - Enforces exhaustive switches via `never` type. Use in reducers to enforce exhaustive action handling (available in `refrakt/utils.js`)
 
 ## License
 

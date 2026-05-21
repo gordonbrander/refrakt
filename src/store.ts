@@ -126,18 +126,3 @@ export const withLogging = <Model, Action, Context>(
     return result;
   };
 };
-
-/**
- * Convenience function for handling unreachable actions in the default arm
- * of a reducer.
- *
- * Because `action` is of type `never`, Typescript will show an error under
- * this argument if the switch is not exhaustive.
- */
-export const unreachable = <Model, Action>(
-  state: Model,
-  action: never,
-): Tx<Model, Action> => {
-  console.error("Unreachable action", action);
-  return tx(state);
-};
