@@ -56,7 +56,7 @@ export const computed = <T>(callback: () => T): Signal.Computed<T> =>
   new Signal.Computed(callback);
 
 /**
- * Peek at the value of a signal without tracking it.
+ * Run a callback, reading signals without tracking them as dependencies.
  * Be careful with this function, it can lead to unsound code!
  */
-export const peek = <T>(cb: () => T): T => Signal.subtle.untrack(cb);
+export const untrack = <T>(cb: () => T): T => Signal.subtle.untrack(cb);

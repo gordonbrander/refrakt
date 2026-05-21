@@ -1,46 +1,81 @@
-import { type AnySignal, signal } from "./signal.js";
+import { signal } from "./signal.js";
+import { type SendableSignal } from "./send.js";
+
+/** Represents an fx that can be executed against a model state, yielding actions. */
+export type Fx<Model, Action> = (state: () => Model) => AsyncGenerator<Action>;
+
+/** A no-op fx that yields nothing. */
+export async function* noFx<Action>(): AsyncGenerator<Action> {
+  // Yield nothing
+}
 
 /**
- * A tagged action. Convenience type for simple actions with a
- * `type` discriminator and a `value`.
+ * A transaction is a value that represents a state update and optional fx.
  */
-export type TaggedAction<Type extends string, Value> = {
-  type: Type;
-  value: Value;
+export type Tx<Model, Action> = {
+  state: Model;
+  fx: Fx<Model, Action>;
 };
 
-/** Convencience factory for creating an action with a `type` discriminator and `value` */
-export const action = <Type extends string, Value>(
-  type: Type,
-  value: Value,
-): TaggedAction<Type, Value> => ({
-  type,
-  value,
-});
+/** Create a transaction */
+export const tx = <Model, Action>(
+  state: Model,
+  fx: Fx<Model, Action> = noFx<Action>,
+): Tx<Model, Action> => ({ state, fx });
 
-export type Reducer<Model, Action> = (
+export type Update<Model, Action, Context> = (
   state: Model,
   action: Action,
-) => Model;
+  context: Context,
+) => Tx<Model, Action>;
 
-export type Send<Action> = (action: Action) => void;
-
-export type Store<Model, Action> = AnySignal<Model> & {
-  send: Send<Action>;
-};
+/** The signal returned by `store()`: a readable state with a `send` method. */
+export type StoreSignal<Model, Action> = SendableSignal<Model, Action>;
 
 /**
  * Create a signals-based store that updates through the provided `update`
  * reducer function.
- * @arg update - The reducer function that updates the store state.
+ * @arg update - The reducer function that updates the store by returning
+ *   a new state and optional effects.
  * @arg initial - The initial state of the store.
+ * @arg context - The context object passed to the reducer function (optional)
  * @returns A store object with a signal for the state and a send method.
  */
-export const store = <Model, Action>(
-  update: Reducer<Model, Action>,
+export function store<Model, Action>(
+  update: Update<Model, Action, void>,
   initial: Model,
-): Store<Model, Action> => {
+): StoreSignal<Model, Action>;
+export function store<Model, Action, Context>(
+  update: Update<Model, Action, Context>,
+  initial: Model,
+  context: Context,
+): StoreSignal<Model, Action>;
+export function store<Model, Action, Context>(
+  update: Update<Model, Action, Context>,
+  initial: Model,
+  context?: Context,
+): StoreSignal<Model, Action> {
   const $state = signal(initial);
+
+  const forkFx = async (fx: Fx<Model, Action>) => {
+    const generator = fx(get);
+    while (true) {
+      try {
+        const { value, done } = await generator.next();
+
+        if (done) {
+          return;
+        }
+
+        if (value != undefined) {
+          send(value);
+        }
+      } catch (e) {
+        console.error("Error in effect", e);
+        return;
+      }
+    }
+  };
 
   /**
    * Get the current state.
@@ -53,36 +88,42 @@ export const store = <Model, Action>(
    * This method is hard-bound to the reducer so you can pass it around as a function.
    */
   const send = (action: Action) => {
-    const next = update($state.get(), action);
-    $state.set(next);
+    const { state, fx } = update($state.get(), action, context!);
+    $state.set(state);
+    forkFx(fx);
   };
 
   return { get, send };
-};
+}
+
+const alwaysLog = () => true;
 
 /**
- * Transform a send function so that it tags actions on the way out.
- * This can be useful for mapping actions from one component domain to another.
+ * Wrap update function with logging.
+ * @param update - The update function to wrap.
+ * @param options - options object
+ * @param options.name - Name of the store in log messages. Defaults to "store".
+ * @param options.log - A function that returns `true` if logging should be enabled.
+ * @returns A new update function that logs state transitions.
  */
-export const forward = <ActionA, ActionB>(
-  send: (action: ActionA) => void,
-  tag: (action: ActionB) => ActionA,
-) =>
-  (action: ActionB): void => {
-    send(tag(action));
+export const withLogging = <Model, Action, Context>(
+  update: Update<Model, Action, Context>,
+  {
+    name = "store",
+    log = alwaysLog,
+  }: {
+    name?: string;
+    log?: () => boolean;
+  } = {},
+): Update<Model, Action, Context> => {
+  return (state: Model, action: Action, context: Context) => {
+    if (log()) {
+      console.debug("<-", name, action);
+    }
+    const result = update(state, action, context);
+    if (log()) {
+      console.debug("->", name, result.state);
+    }
+    return result;
   };
-
-/**
- * Convenience function for logging unknown actions in the default arm
- * of a reducer.
- *
- * Because `action` is of type `never`, Typescript will show an error under
- * this argument if the switch is not exhaustive.
- */
-export const updateUnknown = <Model>(
-  state: Model,
-  action: never,
-): Model => {
-  console.warn("Unknown action", action);
-  return state;
 };

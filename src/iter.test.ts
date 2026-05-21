@@ -169,10 +169,10 @@ test("mapAsync - propagates mapper errors", async () => {
     return x * 2;
   };
 
-  await assert.rejects(
-    () => collectAll(mapAsync(source, mapper)),
-    { name: "Error", message: "Test error" },
-  );
+  await assert.rejects(() => collectAll(mapAsync(source, mapper)), {
+    name: "Error",
+    message: "Test error",
+  });
 });
 
 test("Complex scenario - combining all utilities", async () => {
@@ -224,10 +224,10 @@ test("Edge case - iterator that throws during iteration", async () => {
     throw new Error("Iterator error");
   }
 
-  await assert.rejects(
-    () => collectAll(mergeAsync(errorIterator())),
-    { name: "Error", message: "Iterator error" },
-  );
+  await assert.rejects(() => collectAll(mergeAsync(errorIterator())), {
+    name: "Error",
+    message: "Iterator error",
+  });
 });
 
 test("Edge case - concurrent access to same iterator", async () => {
@@ -235,11 +235,7 @@ test("Edge case - concurrent access to same iterator", async () => {
   const iterator = toAsyncIterator(source);
 
   // Try to access the same iterator concurrently
-  const promises = [
-    iterator.next(),
-    iterator.next(),
-    iterator.next(),
-  ];
+  const promises = [iterator.next(), iterator.next(), iterator.next()];
 
   const results = await Promise.all(promises);
 
@@ -247,5 +243,8 @@ test("Edge case - concurrent access to same iterator", async () => {
   assert.strictEqual(results[0].value, 1);
   assert.strictEqual(results[1].value, 2);
   assert.strictEqual(results[2].value, 3);
-  assert.strictEqual(results.every((r) => !r.done), true);
+  assert.strictEqual(
+    results.every((r) => !r.done),
+    true,
+  );
 });

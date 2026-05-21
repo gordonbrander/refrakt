@@ -1,99 +1,233 @@
 # Refrakt: state management with signals
 
-A lightweight, scalable state management library built on top of signals. Pairs well with [Lit](https://lit.dev/) and other frameworks that support [TC39 signals](https://github.com/proposal-signals/signal-polyfill).
+A lightweight state management library built on top of signals. Pairs well with [Lit](https://lit.dev/) and other frameworks that support [TC39 signals](https://github.com/proposal-signals/signal-polyfill).
 
-At its core, Refrakt is just a signal defined with a reducer. But don't underestimate it! Using middleware, you can scale Refrakt all the way up into a powerful store with managed side effects and more.
+Refrakt is built around a simple concept: define a signal with a reducer, send actions to update it.
 
 ## Features
 
 - **Fine-grained reactivity**: Built on top of TC39 signals.
-- **Effects**: Optional managed side effects via async generators.
-- **Middleware**: Enhance store behavior via function composition.
+- **Managed fx**: Elm-style transactional fx management.
+- **Scoped stores**: Create child stores that project parent state and tag actions.
 - **Minimal dependencies**: Uses only `signal-polyfill` library for maximum compatibility.
+
+## Importing
+
+Refrakt is published as ES modules. The package entry point re-exports the
+primary constructors and core types:
+
+```typescript
+import { signal, computed, effect, reducer, store, tx, scope } from "refrakt";
+```
+
+Every module is also available as a subpath import. Reach for these to pull in
+long-tail helpers such as `withLogging`, `untrack`, `noFx`, and the `iter`
+async-iterator utilities, which are intentionally kept off the main entry point:
+
+```typescript
+import { signal, computed, effect, untrack } from "refrakt/signal.js";
+import { reducer, withLogging } from "refrakt/reducer.js";
+import { store, tx, noFx, withLogging } from "refrakt/store.js";
+import { scope } from "refrakt/scope.js";
+import { forward } from "refrakt/send.js";
+import { assertNever } from "refrakt/never.js";
+import { mergeAsync, sequenceAsync, mapAsync } from "refrakt/iter.js";
+```
+
+The examples below use subpath imports throughout.
 
 ## Example
 
 Here's a simple counter example using [Lit](https://lit.dev/) for UI.
 
 ```typescript
-import { store } from "refrakt";
-import { LitElement, html } from 'lit';
-import { customElement } from 'lit/decorators.js';
-import { SignalWatcher } from '@lit-labs/signals';
+import { reducer } from "refrakt/reducer.js";
+import { assertNever } from "refrakt/never.js";
+import { LitElement, html } from "lit";
+import { customElement } from "lit/decorators.js";
+import { SignalWatcher } from "@lit-labs/signals";
 
 type Model = { count: number };
-type Action = { type: 'inc' } | { type: 'dec' };
+type Action = { type: "inc" } | { type: "dec" };
 
-const updateCounter = (state: Model, action: Action) => {
+const update = (state: Model, action: Action): Model => {
   switch (action.type) {
-    case 'inc': return { count: state.count + 1 };
-    case 'dec': return { count: state.count - 1 };
-    default: return state;
+    case "inc":
+      return { count: state.count + 1 };
+    case "dec":
+      return { count: state.count - 1 };
+    default:
+      return assertNever(action);
   }
 };
 
-const counter = store(updateCounter, { count: 0 });
+const counter = reducer(update, { count: 0 });
 
-@customElement('counter-app')
+@customElement("counter-app")
 class CounterApp extends SignalWatcher(LitElement) {
   render() {
     return html`
       <div>
         <h1>Count: ${counter.get().count}</h1>
-        <button @click=${() => counter.send({ type: 'inc' })}>+</button>
-        <button @click=${() => counter.send({ type: 'dec' })}>-</button>
+        <button @click=${() => counter.send({ type: "inc" })}>+</button>
+        <button @click=${() => counter.send({ type: "dec" })}>-</button>
       </div>
     `;
   }
 }
 ```
 
-## Store
+## Reducer
 
-`store()` creates a signal that can only be updated via its reducer function. It's conceptually similar to React's `useReducer` hook, except it's based on signals.
+`reducer()` creates a signal updated via a pure reducer function. It works like React's `useReducer()` hook, except it's a signal.
 
 ```typescript
-import { store } from 'refrakt';
+import { reducer } from "refrakt/reducer.js";
+import { assertNever } from "refrakt/never.js";
 
 type CounterAction =
-  | { type: 'increment' }
-  | { type: 'decrement' }
-  | { type: 'set', value: number };
+  | { type: "increment" }
+  | { type: "decrement" }
+  | { type: "set"; value: number };
 
-type CounterModel = { count: number };
-
-const update = (state: CounterModel, action: CounterAction) => {
+const update = (state: number, action: CounterAction): number => {
   switch (action.type) {
-    case 'increment':
-      return { count: state.count + 1 };
-    case 'decrement':
-      return { count: state.count - 1 };
-    case 'set':
-      return { count: action.value };
+    case "increment":
+      return state + 1;
+    case "decrement":
+      return state - 1;
+    case "set":
+      return action.value;
     default:
-      return state;
+      return assertNever(action);
   }
 };
 
-const counterStore = store(update, { count: 0 });
+const counterStore = reducer(update, 0);
 
-// Send actions to update state
-counterStore.send({ type: 'increment' });
-console.log(counterStore.get().count); // 1
+counterStore.send({ type: "increment" });
+console.log(counterStore.get()); // 1
 ```
 
-All actions go through the update function. There is no other way to update the store's state. This gives you consistent and predictable state management that is easy to test. By writing unit tests for the update function, you can ensure that your application's state is always valid.
+## Store
 
-You can create multiple stores for different components, or create a single central store for your entire application state. It's up to you!
+`store()` returns a signal of exactly the same type as `reducer()`, but with additional support for managed side-effects. Instead of returning just the next state, a store's reducer returns a transaction object containing the next state _and_ optional side-effects. Side-effects are modeled as async generator functions that yield zero or more actions back to the store.
 
-Because stores are just signals, you can use computed signals to scope store state, or even combine state from multiple stores. Signals give you a lot of flexibility to mix and match approaches. Refrakt even offers a `scope` middleware to create scoped child stores from parent stores (see below).
+```typescript
+import { store, tx, type Tx } from "refrakt/store.js";
+import { assertNever } from "refrakt/never.js";
+
+type Model = { count: number; fetching: boolean };
+
+type Action =
+  | { type: "increment" }
+  | { type: "fetch" }
+  | { type: "fetch-complete"; value: number };
+
+const update = (state: Model, action: Action): Tx<Model, Action> => {
+  switch (action.type) {
+    case "increment":
+      return tx({ ...state, count: state.count + 1 });
+    case "fetch":
+      // State update and fx in a single transaction
+      return tx({ ...state, fetching: true }, async function* () {
+        const response = await fetch("/api/count");
+        const data = await response.json();
+        yield { type: "fetch-complete", value: data.count };
+      });
+    case "fetch-complete":
+      return tx({ ...state, count: action.value, fetching: false });
+    default:
+      return assertNever(action);
+  }
+};
+
+const counterStore = store(update, { count: 0, fetching: false });
+counterStore.send({ type: "fetch" }); // Sets `fetching` and kicks off fx generator
+counterStore.get().fetching; // true
+```
+
+`tx(state, fx?)` offers a convenience function for creating transaction objects. Transactions are just plain objects with state and fx properties:
+
+```typescript
+type Tx<Model, Action> = {
+  state: Model;
+  fx: (state: () => Model) => AsyncGenerator<Action>;
+};
+```
+
+The fx generator function also receives a `state()` function, which it can use to check on the state of the store after time has elapsed.
+
+```typescript
+async function* (state: () => Model) {
+  await sleep(2000);
+  if (state().cancel) {
+    return;
+  }
+  yield { type: "msg", value: "hello world" }
+}
+```
+
+### Transactional side-effects
+
+Why store? Why transactions? For simple side-effects, a signal or reducer combined with `effect()` may be enough. For example, this gives you the equivalent of React's `useEffect()`:
+
+```typescript
+import { effect } from "refrakt/signal.js";
+import { reducer } from "refrakt/reducer.js";
+
+const state = reducer((state: Model, action: Action) => {
+  // ...
+}, initial);
+
+// Fires every time state changes
+effect(() => {
+  service.doSomething(state.get());
+});
+```
+
+However, when side-effects become sufficiently complex, you may want to reach for a store. The key advantage is that store lets you implement structured and **transactional** side-effects.
+
+**Fx** are issued in response to actions _during the same transaction as the state_. This means you can implement atomic check-then-update-then-fx patterns in response to actions. For example, preventing duplicate fetches:
+
+```typescript
+case 'fetch':
+  // Already fetching? Do nothing.
+  if (state.fetching) {
+    return tx(state);
+  }
+  // Set flag AND issue fx atomically
+  return tx(
+    { ...state, fetching: true },
+    async function* () {
+      const data = await fetchData();
+      yield { type: 'fetch-complete', value: data };
+    }
+  );
+```
+
+Because each update runs sequentially and atomically, and the flag and fx are set during the same transaction, there is no window where a duplicate fetch can slip through. It can be difficult to achieve this kind of atomic control over effects when state and effects are handled separately.
+
+### Context
+
+`store()` accepts an optional third `context` argument, passed to the update function on every action:
+
+```typescript
+const update: Update<Model, Action, Services> = (state, action, services) => {
+  // ...
+};
+
+const myStore = store(update, initialState, services);
+```
+
+This can be used to expose external services to the update function.
 
 ## Signals
 
 The signals module re-exports the TC39 signals polyfill, as well as providing a handful of convenience functions.
 
 ```typescript
-import { signal, computed, effect } from 'refrakt/signal.js';
+import { signal, computed, effect } from "refrakt/signal.js";
 
 // Create a `State` signal
 const count = signal(10);
@@ -107,7 +241,7 @@ When you want to react to signal changes, you can use `effect`. Effects are auto
 ```ts
 // React to changes
 const cleanup = effect(() => {
-  console.log('Count:', count.get(), 'Doubled:', doubled.get());
+  console.log("Count:", count.get(), "Doubled:", doubled.get());
 });
 
 count.set(20); // Logs: "Count: 20 Doubled: 40"
@@ -118,145 +252,67 @@ Because stores are just another signal, you can use `computed` to scope down sta
 
 ```ts
 // Only updates when username changes
-const username = computed(() => store.get().account.profile.username);
+const username = computed(() => myStore.get().account.profile.username);
 ```
 
+## Logging
 
-## Fx middleware
-
-While `effect()` is great for running simple side-effects whenever data changes, you sometimes want a more structured approach for managing complex side-effects. The `fx` middleware provides a powerful way to handle managed side effects using async generators.
-
-The `fx` middleware takes a single function that returns an async generator.
+Both `store` and `reducer` provide a `withLogging` function that wraps an update/reducer function with debug logging.
 
 ```typescript
-type Fx<Model, Action> = (
-  state: () => Model, // Get current state
-  action: Action // Action triggering this effect
-) => AsyncGenerator<Action>; // Yielded actions are sent back to store
+import { store, tx, withLogging, type Update } from "refrakt/store.js";
+
+const update: Update<Model, Action, void> = (state, action) => {
+  // ...
+};
+
+const loggedUpdate = withLogging(update);
+const myStore = store(loggedUpdate, initialState);
 ```
 
-The effect generator function is called for each new action sent to the store, allowing it to perform async work and yield back zero or more actions in response.
-
 ```typescript
-import { store, pipe } from 'refrakt';
-import { fx, type Fx } from 'refrakt/middleware/fx.js';
+import { reducer, withLogging, type Reducer } from "refrakt/reducer.js";
 
-const fetchProfileFx: Fx<AppState, AppAction> = async function* (state, action) {
-  if (action.type === "fetch-profile") {
-    const response = await fetch("/api/v1/profile", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(action.id),
-    });
-
-    const json = await response.json();
-
-    yield {
-      type: "fetch-profile-success",
-      value: json
-    };
-
-    return;
-  }
+const step: Reducer<Model, Action> = (state, action) => {
+  // ...
 };
 
-// Apply middleware
-const appStore = pipe(
-  store(appReducer, initialState),
-  fx(fetchProfileFx)
-);
-
-// Trigger effect
-appStore.send({ type: 'fetch-profile' });
-````
-
-The effect generator function also receives a getter function that returns the current state. This allows effects to decide if they should keep running by checking the application state, giving us a simple mechanism for effect cancellation.
-
-```typescript
-type AppAction =
-  | { type: 'start-clock' }
-  | { type: 'stop-clock' }
-  | { type: 'tick' };
-
-const clockFx: Fx<AppState, AppAction> = async function* (state, action) {
-  if (action.type === "start-clock") {
-    // Run effect until application model says to stop
-    while (state().isClockRunning === true) {
-      yield { type: 'tick' };
-      await sleep(1000);
-    }
-  }
-};
-```
-
-`fx` can also take an additional `context` parameter. This can be used to pass additional information to the effect generator, such as services for performing I/O operations.
-
-```ts
-import services from './services.js';
-
-const loginFx: Fx<AppState, AppAction, AppContext> = async function* (state, action, context) {
-  if (action.type === "login") {
-    const success = await auth.login();
-    if (success) {
-      yield { type: 'login-success' };
-    } else {
-      yield { type: 'login-failure' };
-    }
-  }
-};
-
-const appStore = pipe(
-  store(appReducer, initialState),
-  fx(loginFx, services)
-);
-````
-
-Because effects are just async generators, they can be easily composed and mapped. The `iter` submodule provides a handful of useful utility functions for merging and mapping async generators:
-
-- `mergeAsync(...iterables)` - Merge multiple async iterables, yielding values in interleaved order as they become available
-- `sequenceAsync(...iterables)` - Sequence async iterables, yielding all values from the first before moving to the next
-- `mapAsync(iterable, transform)` - Transform each value in an async iterable using a sync or async function
-
-## Logger middleware
-
-Logs all actions and state changes to the console:
-
-```typescript
-import { store, pipe } from 'refrakt';
-import { logger } from 'refrakt/middleware/logger.js';
-
-const myStore = pipe(
-  store(update, initialState),
-  logger({ prefix: 'MyStore: ' })
-);
+const loggedStep = withLogging(step, { name: "myReducer" });
+const myStore = reducer(loggedStep, initialState);
 ```
 
 Example output:
+
 ```
-MyStore: < { type: 'increment' }
-MyStore: > { count: 1 }
+<- store { type: 'increment' }
+-> store { count: 1 }
 ```
 
-## Scope middleware
-
-Scope lets you create a scoped child store from a parent store. It returns a new store that is indistinguishable from a top-level store. However, this child store's state is derived from the parent state, and all messages are routed through the parent store.
+You can also pass a `log` predicate to conditionally enable logging:
 
 ```typescript
-import { store, pipe } from 'refrakt';
-import { scope } from 'refrakt/middleware/scope.js';
+const loggedUpdate = withLogging(update, {
+  log: () => import.meta.env.DEV,
+});
+```
 
-const childStore = pipe(
-  parentStore,
-  scope(
-    // Get child state from parent state
-    (state: Model) => state.child,
-    // Tag child actions, transforming them into parent actions
-    (action: ChildAction) => ({
-      type: "child",
-      value: action
-    })
-  )
-);
+## Scope
+
+`scope` creates a child store from a parent store. The child store's state is derived from the parent state, and all actions are tagged and routed through the parent store.
+
+```typescript
+import { scope } from "refrakt/scope.js";
+
+const childStore = scope({
+  store: parentStore,
+  // Project parent state to child state
+  get: (state: ParentModel) => state.child,
+  // Tag child actions, transforming them into parent actions
+  tag: (action: ChildAction): ParentAction => ({
+    type: "child",
+    action,
+  }),
+});
 ```
 
 One way you can use scope is to create components that can be used in _either_ an island architecture style, or in a more Elmish subcomponent style.
@@ -265,17 +321,17 @@ Components can be initialized with their own store by default. This store can be
 
 ```typescript
 // child-component.ts
-import { store, type Store } from "refrakt";
-import { LitElement, html } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import { watch } from '@lit-labs/signals';
+import { store, tx, type StoreSignal } from "refrakt/store.js";
+import { LitElement, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import { watch } from "@lit-labs/signals";
 
 // ...
 
-@customElement('child-component')
+@customElement("child-component")
 class ChildComponent extends LitElement {
   @property({ attribute: false })
-  store: Store<ChildModel, ChildAction> = store(update, { count: 0 });
+  store: StoreSignal<ChildModel, ChildAction> = store(update, { count: 0 });
 
   // ...
 }
@@ -283,28 +339,25 @@ class ChildComponent extends LitElement {
 
 ```typescript
 // parent-component.ts
-import { pipe } from "refrakt";
-import { scope } from "refrakt/middleware/scope.js";
-import { LitElement, html } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { scope } from "refrakt/scope.js";
+import { LitElement, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import * as ChildComponent from "./child-component.js";
 
 // ...
 
-const childStore = pipe(
-  parentStore,
-  scope(
-    (state: ParentModel) => state.child,
-    (msg: ChildAction): ParentAction => ({ type: "child", msg })
-  ),
-);
+const childStore = scope({
+  store: parentStore,
+  get: (state: ParentModel) => state.child,
+  tag: (action: ChildAction): ParentAction => ({ type: "child", action }),
+});
 
-@customElement('parent-component')
+@customElement("parent-component")
 class ParentComponent extends LitElement {
   render() {
     return html`
       <div class="parent">
-          <child-component .store=${childStore}></child-component>
+        <child-component .store=${childStore}></child-component>
       </div>
     `;
   }
@@ -313,63 +366,19 @@ class ParentComponent extends LitElement {
 
 Because scoped stores are indistinguishable from parent stores, you can replace the default child store, and the child component will be none the wiser. This allows for a form of dependency injection where parent components can intercept and react to child actions, as well as customize child component behavior.
 
-## Custom Middleware
+## Async Iterator Utilities
 
-Middleware are just functions of `(store: Store<Model, Msg>) => Store<Model, Msg>` that wrap the store, returning a new store with enhanced behavior.
+The `iter` submodule provides utility functions for working with async generators. These can be useful for merging and mapping fx between component domains.
 
-That means you can simply pass the store to a middleware function:
-
-```ts
-const loggerMiddleware = logger();
-const myStore = loggerMiddleware(store(update, initial));
-```
-
-Simple! However, if you're applying more than one middleware, these nested function calls can get a little tedious. `pipe()` makes this a bit more ergonomic. It applies multiple middleware functions to the store from left-to-right, returning the final decorated store:
-
-```typescript
-import { store, pipe } from 'refrakt';
-import { fx } from 'refrakt/middleware/fx.js';
-import { logger } from 'refrakt/middleware/logger.js';
-
-const counterStore = pipe(
-  store(update, { count: 0 }),
-  logger({ prefix: 'Counter: ' }),
-  fx(mySaga)
-);
-```
-
-This compositional approach makes it easy to add, remove, or write your own middleware. Just write a function that takes a store and returns a new store with enhanced behavior:
-
-```typescript
-import type { Store } from 'refrakt';
-
-const timingMiddleware = <Model, Action>() =>
-  (store: Store<Model, Action>): Store<Model, Action> => {
-    const timedSend = (action: Action) => {
-      const start = performance.now();
-      store.send(action);
-      const duration = performance.now() - start;
-      console.log(`Action took ${duration}ms`);
-    };
-
-    return {
-      get: store.get,
-      send: timedSend
-    };
-  };
-
-// Use with pipe
-const myStore = pipe(
-  store(update, initialState),
-  timingMiddleware()
-);
-```
+- `mergeAsync(...iterables)` - Merge multiple async iterables, yielding values in interleaved order as they become available
+- `sequenceAsync(...iterables)` - Sequence async iterables, yielding all values from the first before moving to the next
+- `mapAsync(iterable, transform)` - Transform each value in an async iterable using a sync or async function
 
 ## Utility Functions
 
-- `action(type, value)` - Create tagged actions: `action('set', 42)` → `{ type: 'set', value: 42 }`
-- `forward(send, transform)` - Decorates send function so that it transform actions before sending
-- `updateUnknown(state, action)` - Default handler for unknown actions (logs warning)
+- `forward(send, tag)` - Transform a send function so that it tags actions on the way out (`refrakt/send.js`)
+- `tx(state, fx?)` - Create a transaction with state and optional fx (`refrakt/store.js`)
+- `assertNever(value)` - Enforces exhaustive switches via `never` type. Use in reducers to enforce exhaustive action handling (available in `refrakt/never.js`)
 
 ## License
 

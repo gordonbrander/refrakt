@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { forward, action, type Reducer, store, updateUnknown } from "./store.js";
+import { store, tx, type Update, withLogging } from "./store.js";
+import { assertNever } from "./never.js";
+
+// Helper function to create a promise that resolves after a delay
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Test types for actions
 type CounterAction =
@@ -9,60 +13,44 @@ type CounterAction =
   | { type: "set"; value: number }
   | { type: "add"; value: number };
 
-type TodoAction =
-  | { type: "add"; text: string }
-  | { type: "toggle"; id: number }
-  | { type: "remove"; id: number };
-
-interface Todo {
-  id: number;
-  text: string;
-  completed: boolean;
-}
-
-interface TodoState {
-  todos: Todo[];
-  nextId: number;
-}
-
 test("store - creates store with initial state", () => {
-  const counterReducer: Reducer<number, CounterAction> = (state, action) => {
+  const update: Update<number, CounterAction, void> = (state, action) => {
     switch (action.type) {
       case "increment":
-        return state + 1;
+        return tx(state + 1);
       case "decrement":
-        return state - 1;
+        return tx(state - 1);
       case "set":
-        return action.value;
+        return tx(action.value);
       case "add":
-        return state + action.value;
+        return tx(state + action.value);
       default:
-        return updateUnknown(state, action);
+        return assertNever(action);
     }
   };
 
-  const counterStore = store(counterReducer, 0);
+  const counterStore = store(update, 0);
 
   assert.strictEqual(counterStore.get(), 0);
 });
 
 test("store - handles actions through send", () => {
-  const counterReducer: Reducer<number, CounterAction> = (state, action) => {
+  const update: Update<number, CounterAction, void> = (state, action) => {
     switch (action.type) {
       case "increment":
-        return state + 1;
+        return tx(state + 1);
       case "decrement":
-        return state - 1;
+        return tx(state - 1);
       case "set":
-        return action.value;
+        return tx(action.value);
       case "add":
-        return state + action.value;
+        return tx(state + action.value);
       default:
-        return updateUnknown(state, action);
+        return assertNever(action);
     }
   };
 
-  const counterStore = store(counterReducer, 0);
+  const counterStore = store(update, 0);
 
   counterStore.send({ type: "increment" });
   assert.strictEqual(counterStore.get(), 1);
@@ -80,145 +68,204 @@ test("store - handles actions through send", () => {
   assert.strictEqual(counterStore.get(), 15);
 });
 
-test("store - works with complex state", () => {
-  const todoReducer: Reducer<TodoState, TodoAction> = (state, action) => {
+test("store - transactional effects yield actions", async () => {
+  type Action = { type: "fetch" } | { type: "set"; value: number };
+
+  const update: Update<number, Action, void> = (state, action) => {
     switch (action.type) {
-      case "add":
-        return {
-          ...state,
-          todos: [...state.todos, {
-            id: state.nextId,
-            text: action.text,
-            completed: false,
-          }],
-          nextId: state.nextId + 1,
-        };
-      case "toggle":
-        return {
-          ...state,
-          todos: state.todos.map((todo) =>
-            todo.id === action.id
-              ? { ...todo, completed: !todo.completed }
-              : todo
-          ),
-        };
-      case "remove":
-        return {
-          ...state,
-          todos: state.todos.filter((todo) => todo.id !== action.id),
-        };
+      case "fetch":
+        return tx<number, Action>(state, async function* () {
+          await delay(10);
+          yield { type: "set", value: 42 };
+        });
+      case "set":
+        return tx(action.value);
       default:
-        return updateUnknown(state, action);
+        return assertNever(action);
     }
   };
 
-  const todoStore = store(todoReducer, { todos: [], nextId: 1 });
+  const myStore = store(update, 0);
 
-  assert.strictEqual(todoStore.get().todos.length, 0);
+  myStore.send({ type: "fetch" });
+  assert.strictEqual(myStore.get(), 0);
 
-  todoStore.send({ type: "add", text: "Buy milk" });
-  assert.strictEqual(todoStore.get().todos.length, 1);
-  assert.strictEqual(todoStore.get().todos[0].text, "Buy milk");
-  assert.strictEqual(todoStore.get().todos[0].completed, false);
-  assert.strictEqual(todoStore.get().todos[0].id, 1);
+  await delay(20);
 
-  todoStore.send({ type: "add", text: "Walk dog" });
-  assert.strictEqual(todoStore.get().todos.length, 2);
-  assert.strictEqual(todoStore.get().nextId, 3);
-
-  todoStore.send({ type: "toggle", id: 1 });
-  assert.strictEqual(todoStore.get().todos[0].completed, true);
-
-  todoStore.send({ type: "remove", id: 1 });
-  assert.strictEqual(todoStore.get().todos.length, 1);
-  assert.strictEqual(todoStore.get().todos[0].text, "Walk dog");
+  assert.strictEqual(myStore.get(), 42);
 });
 
-test("action - creates tagged action", () => {
-  const testAction = action("test", 42);
+test("store - effects can yield multiple actions", async () => {
+  type Action = { type: "start" } | { type: "increment" };
 
-  assert.strictEqual(testAction.type, "test");
-  assert.strictEqual(testAction.value, 42);
-});
-
-test("action - works with different value types", () => {
-  const stringAction = action("string", "hello");
-  assert.strictEqual(stringAction.type, "string");
-  assert.strictEqual(stringAction.value, "hello");
-
-  const objectAction = action("object", { key: "value" });
-  assert.strictEqual(objectAction.type, "object");
-  assert.deepStrictEqual(objectAction.value, { key: "value" });
-
-  const arrayAction = action("array", [1, 2, 3]);
-  assert.strictEqual(arrayAction.type, "array");
-  assert.deepStrictEqual(arrayAction.value, [1, 2, 3]);
-});
-
-test("forward - transforms actions", () => {
-  const receivedActions: string[] = [];
-
-  const parentSend = (action: string) => {
-    receivedActions.push(action);
+  const update: Update<number, Action, void> = (state, action) => {
+    switch (action.type) {
+      case "start":
+        return tx<number, Action>(state, async function* () {
+          yield { type: "increment" };
+          await delay(5);
+          yield { type: "increment" };
+          yield { type: "increment" };
+        });
+      case "increment":
+        return tx(state + 1);
+      default:
+        return assertNever(action);
+    }
   };
 
-  const childSend = forward(
-    parentSend,
-    (childAction: number) => `child:${childAction}`,
-  );
+  const myStore = store(update, 0);
+  myStore.send({ type: "start" });
 
-  childSend(1);
-  childSend(2);
-  childSend(3);
+  await delay(20);
 
-  assert.deepStrictEqual(receivedActions, ["child:1", "child:2", "child:3"]);
+  assert.strictEqual(myStore.get(), 3);
 });
 
-test("forward - works with complex transformations", () => {
-  type ParentAction = { type: "parent"; data: string };
-  type ChildAction = { type: "child"; value: number };
-
-  const receivedActions: ParentAction[] = [];
-
-  const parentSend = (action: ParentAction) => {
-    receivedActions.push(action);
+test("store - transactional check-then-update-then-effect", async () => {
+  type Model = {
+    count: number;
+    fetching: boolean;
   };
 
-  const childSend = forward(parentSend, (childAction: ChildAction) => ({
-    type: "parent" as const,
-    data: `transformed-${childAction.value}`,
-  }));
+  type Action = { type: "fetch" } | { type: "set"; value: number };
 
-  childSend({ type: "child", value: 42 });
+  const update: Update<Model, Action, void> = (state, action) => {
+    switch (action.type) {
+      case "fetch":
+        // Check: if already fetching, do nothing (no duplicate effects)
+        if (state.fetching) {
+          return tx(state);
+        }
+        // Update flag AND issue effect in a single transaction
+        return tx<Model, Action>(
+          { ...state, fetching: true },
+          async function* () {
+            await delay(10);
+            yield { type: "set", value: 42 };
+          },
+        );
+      case "set":
+        return tx({ ...state, count: action.value, fetching: false } as Model);
+      default:
+        return assertNever(action);
+    }
+  };
 
-  assert.strictEqual(receivedActions.length, 1);
-  assert.strictEqual(receivedActions[0].type, "parent");
-  assert.strictEqual(receivedActions[0].data, "transformed-42");
+  const myStore = store(update, { count: 0, fetching: false });
+
+  // First fetch: sets fetching=true, starts effect
+  myStore.send({ type: "fetch" });
+  assert.strictEqual(myStore.get().fetching, true);
+
+  // Second fetch while first is in-flight: no-op (no duplicate effect)
+  myStore.send({ type: "fetch" });
+  assert.strictEqual(myStore.get().fetching, true);
+
+  await delay(20);
+
+  assert.strictEqual(myStore.get().count, 42);
+  assert.strictEqual(myStore.get().fetching, false);
 });
 
-test("updateUnknown - logs warning and returns state unchanged", () => {
-  const originalWarn = console.warn;
-  let warningMessage = "";
+test("store - context is passed to update function", () => {
+  type Context = { multiplier: number };
 
-  // Mock console.warn
-  console.warn = (msg: string, data: unknown) => {
-    warningMessage = `${msg} ${JSON.stringify(data)}`;
+  const update: Update<number, CounterAction, Context> = (
+    state,
+    action,
+    context,
+  ) => {
+    switch (action.type) {
+      case "increment":
+        return tx(state + context.multiplier);
+      case "decrement":
+        return tx(state - context.multiplier);
+      default:
+        return tx(state);
+    }
+  };
+
+  const myStore = store(update, 0, { multiplier: 10 });
+
+  myStore.send({ type: "increment" });
+  assert.strictEqual(myStore.get(), 10);
+
+  myStore.send({ type: "decrement" });
+  assert.strictEqual(myStore.get(), 0);
+});
+
+test("withLogging - logs actions and state transitions", () => {
+  const logs: string[] = [];
+  const originalDebug = console.debug;
+  console.debug = (...args: unknown[]) => {
+    logs.push(args.map(String).join(" "));
   };
 
   try {
-    const state = { count: 5 };
-    const unknownAction = { type: "unknown", data: "test" };
+    const update: Update<number, CounterAction, void> = (state, action) => {
+      switch (action.type) {
+        case "increment":
+          return tx(state + 1);
+        case "decrement":
+          return tx(state - 1);
+        default:
+          return tx(state);
+      }
+    };
 
-    // @ts-ignore - we want to test updateUnknown
-    const result = updateUnknown(state, unknownAction);
+    const logged = withLogging(update, { name: "counter" });
+    const counterStore = store(logged, 0);
 
-    assert.strictEqual(result, state);
-    assert.strictEqual(
-      warningMessage,
-      'Unknown action {"type":"unknown","data":"test"}',
-    );
+    counterStore.send({ type: "increment" });
+
+    assert.strictEqual(logs.length, 2);
+    assert.ok(logs[0].includes("<-"));
+    assert.ok(logs[0].includes("counter"));
+    assert.ok(logs[1].includes("->"));
+    assert.ok(logs[1].includes("counter"));
   } finally {
-    // Restore console.warn
-    console.warn = originalWarn;
+    console.debug = originalDebug;
   }
+});
+
+test("withLogging - respects log predicate", () => {
+  const logs: string[] = [];
+  const originalDebug = console.debug;
+  console.debug = (...args: unknown[]) => {
+    logs.push(args.map(String).join(" "));
+  };
+
+  try {
+    const update: Update<number, CounterAction, void> = (state, action) => {
+      switch (action.type) {
+        case "increment":
+          return tx(state + 1);
+        default:
+          return tx(state);
+      }
+    };
+
+    const logged = withLogging(update, { log: () => false });
+    const counterStore = store(logged, 0);
+
+    counterStore.send({ type: "increment" });
+    assert.strictEqual(counterStore.get(), 1);
+    assert.strictEqual(logs.length, 0);
+  } finally {
+    console.debug = originalDebug;
+  }
+});
+
+test("assertNever - throws on an unreachable value", () => {
+  const unknownAction = { type: "unknown", data: "test" };
+
+  assert.throws(
+    // @ts-expect-error - we want to test assertNever
+    () => assertNever(unknownAction),
+    {
+      name: "NeverError",
+      value: { type: "unknown", data: "test" },
+    },
+  );
 });

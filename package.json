@@ -3,6 +3,7 @@
   "version": "0.3.2",
   "description": "A lightweight, scalable state management library built on top of TC39 signals",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/main.d.ts",
@@ -16,25 +17,25 @@
       "types": "./dist/signal.d.ts",
       "import": "./dist/signal.js"
     },
+    "./send.js": {
+      "types": "./dist/send.d.ts",
+      "import": "./dist/send.js"
+    },
     "./iter.js": {
       "types": "./dist/iter.d.ts",
       "import": "./dist/iter.js"
     },
-    "./pipe.js": {
-      "types": "./dist/pipe.d.ts",
-      "import": "./dist/pipe.js"
+    "./reducer.js": {
+      "types": "./dist/reducer.d.ts",
+      "import": "./dist/reducer.js"
     },
-    "./middleware/logger.js": {
-      "types": "./dist/middleware/logger.d.ts",
-      "import": "./dist/middleware/logger.js"
+    "./scope.js": {
+      "types": "./dist/scope.d.ts",
+      "import": "./dist/scope.js"
     },
-    "./middleware/fx.js": {
-      "types": "./dist/middleware/fx.d.ts",
-      "import": "./dist/middleware/fx.js"
-    },
-    "./middleware/scope.js": {
-      "types": "./dist/middleware/scope.d.ts",
-      "import": "./dist/middleware/scope.js"
+    "./never.js": {
+      "types": "./dist/never.d.ts",
+      "import": "./dist/never.js"
     }
   },
   "files": [
@@ -46,9 +47,15 @@
     "LICENSE-MIT"
   ],
   "scripts": {
+    "prebuild": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "tsc",
-    "prepublishOnly": "npm run build",
-    "test": "npm run build && node --test \"dist/**/*.test.js\""
+    "prepublishOnly": "npm run check && npm run check:examples && npm run lint && npm run check-fmt && npm run build",
+    "test": "npm run build && node --test \"dist/**/*.test.js\"",
+    "check": "tsc --noEmit",
+    "check:examples": "tsc -p examples/tsconfig.json",
+    "fmt": "prettier --write .",
+    "lint": "eslint .",
+    "check-fmt": "prettier --check ."
   },
   "keywords": [
     "signals",
@@ -68,7 +75,10 @@
   },
   "devDependencies": {
     "@types/node": "^24.8.0",
-    "typescript": "^5.7.2"
+    "eslint": "^10.1.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.57.2"
   },
   "repository": {
     "type": "git",

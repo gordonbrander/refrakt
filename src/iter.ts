@@ -1,9 +1,9 @@
 /** A promise or value */
 export type Awaitable<T> = Promise<T> | T;
 
-export const toAsyncIterator = <T>(
-  iterable: AsyncIterable<T>,
-): AsyncIterator<T, unknown, unknown> => {
+export const toAsyncIterator = <T, TReturn, TNext>(
+  iterable: AsyncIterable<T, TReturn, TNext>,
+): AsyncIterator<T, TReturn, TNext> => {
   return iterable[Symbol.asyncIterator]();
 };
 
@@ -49,10 +49,7 @@ export async function* mergeAsync<T>(...iterables: AsyncIterable<T>[]) {
       yield result.value;
 
       // Immediately queue the next value from this iterator
-      pending.set(
-        key,
-        _getNextKeyedResult(iterators[key], key),
-      );
+      pending.set(key, _getNextKeyedResult(iterators[key], key));
     }
     // If done, iterator is exhausted and won't be added back
   }
