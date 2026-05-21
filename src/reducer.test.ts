@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { reducer, type Reducer, unreachable, withLogging } from "./reducer.js";
+import { reducer, type Reducer, withLogging } from "./reducer.js";
+import { assertNever } from "./utils.js";
 
 // Test types for actions
 type CounterAction =
@@ -37,7 +38,7 @@ test("reducer - creates reducer with initial state", () => {
       case "add":
         return state + action.value;
       default:
-        return unreachable(state, action);
+        return assertNever(action);
     }
   };
 
@@ -58,7 +59,7 @@ test("reducer - handles actions through send", () => {
       case "add":
         return state + action.value;
       default:
-        return unreachable(state, action);
+        return assertNever(action);
     }
   };
 
@@ -111,7 +112,7 @@ test("reducer - works with complex state", () => {
           todos: state.todos.filter((todo) => todo.id !== action.id),
         };
       default:
-        return unreachable(state, action);
+        return assertNever(action);
     }
   };
 
@@ -199,29 +200,15 @@ test("withLogging - respects log predicate", () => {
   }
 });
 
-test("unreachable - logs error and returns state unchanged", () => {
-  const originalError = console.error;
-  let errorMessage = "";
+test("assertNever - throws on an unreachable value", () => {
+  const unknownAction = { type: "unknown", data: "test" };
 
-  // Mock console.error
-  console.error = (msg: string, data: unknown) => {
-    errorMessage = `${msg} ${JSON.stringify(data)}`;
-  };
-
-  try {
-    const state = { count: 5 };
-    const unknownAction = { type: "unknown", data: "test" };
-
-    // @ts-expect-error - we want to test unreachable
-    const result = unreachable(state, unknownAction);
-
-    assert.strictEqual(result, state);
-    assert.strictEqual(
-      errorMessage,
-      'Unreachable action {"type":"unknown","data":"test"}',
-    );
-  } finally {
-    // Restore console.error
-    console.error = originalError;
-  }
+  assert.throws(
+    // @ts-expect-error - we want to test assertNever
+    () => assertNever(unknownAction),
+    {
+      name: "NeverError",
+      value: { type: "unknown", data: "test" },
+    },
+  );
 });

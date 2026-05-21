@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { store, tx, type Update, unreachable, withLogging } from "./store.js";
+import { store, tx, type Update, withLogging } from "./store.js";
+import { assertNever } from "./utils.js";
 
 // Helper function to create a promise that resolves after a delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -24,7 +25,7 @@ test("store - creates store with initial state", () => {
       case "add":
         return tx(state + action.value);
       default:
-        return unreachable(state, action);
+        return assertNever(action);
     }
   };
 
@@ -45,7 +46,7 @@ test("store - handles actions through send", () => {
       case "add":
         return tx(state + action.value);
       default:
-        return unreachable(state, action);
+        return assertNever(action);
     }
   };
 
@@ -80,7 +81,7 @@ test("store - transactional effects yield actions", async () => {
       case "set":
         return tx(action.value);
       default:
-        return unreachable(state, action);
+        return assertNever(action);
     }
   };
 
@@ -109,7 +110,7 @@ test("store - effects can yield multiple actions", async () => {
       case "increment":
         return tx(state + 1);
       default:
-        return unreachable(state, action);
+        return assertNever(action);
     }
   };
 
@@ -147,7 +148,7 @@ test("store - transactional check-then-update-then-effect", async () => {
       case "set":
         return tx({ ...state, count: action.value, fetching: false } as Model);
       default:
-        return unreachable(state, action);
+        return assertNever(action);
     }
   };
 
@@ -256,27 +257,15 @@ test("withLogging - respects log predicate", () => {
   }
 });
 
-test("unreachable - logs error and returns state unchanged", () => {
-  const originalError = console.error;
-  let errorMessage = "";
+test("assertNever - throws on an unreachable value", () => {
+  const unknownAction = { type: "unknown", data: "test" };
 
-  console.error = (msg: string, data: unknown) => {
-    errorMessage = `${msg} ${JSON.stringify(data)}`;
-  };
-
-  try {
-    const state = { count: 5 };
-    const unknownAction = { type: "unknown", data: "test" };
-
-    // @ts-expect-error - we want to test unreachable
-    const result = unreachable(state, unknownAction);
-
-    assert.strictEqual(result.state, state);
-    assert.strictEqual(
-      errorMessage,
-      'Unreachable action {"type":"unknown","data":"test"}',
-    );
-  } finally {
-    console.error = originalError;
-  }
+  assert.throws(
+    // @ts-expect-error - we want to test assertNever
+    () => assertNever(unknownAction),
+    {
+      name: "NeverError",
+      value: { type: "unknown", data: "test" },
+    },
+  );
 });
